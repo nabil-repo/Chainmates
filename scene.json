@@ -1,0 +1,67 @@
+{
+  "ecs7": true,
+  "runtimeVersion": "7",
+  "display": {
+    "title": "Chainmates",
+    "description": "Empty Scene Template",
+    "favicon": "favicon_asset",
+    "navmapThumbnail": ""
+  },
+  "owner": "",
+  "contact": {
+    "name": "Nabil",
+    "email": "nabil.aaaman@gmail.com"
+  },
+  "main": "bin/index.js",
+  "tags": [
+    "game"
+  ],
+  "scene": {
+    "parcels": [
+      "0,0"
+    ],
+    "base": "0,0"
+  },
+  "spawnPoints": [
+    {
+      "name": "LobbyWaitingLounge",
+      "default": true,
+      "position": {
+        "x": [
+          7.0,
+          9.0
+        ],
+        "y": [
+          1.6,
+          1.6
+        ],
+        "z": [
+          0.4,
+          0.8
+        ]
+      },
+      "cameraTarget": {
+        "x": 8.0,
+        "y": 2.5,
+        "z": 6.0
+      }
+    }
+  ],
+  "requiredPermissions": [
+    "ALLOW_TO_TRIGGER_AVATAR_EMOTE",
+    "ALLOW_TO_MOVE_PLAYER_INSIDE_SCENE"
+  ],
+  "featureToggles": {
+    "voiceChat": "enabled",
+    "portableExperiences": "enabled",
+    "nearbyVoiceChat": "enabled"
+  },
+  "creator": "0x1bf70d598f0e539ac7169a218f3ae34c7af3b3bb",
+  "rating": "A",
+  "skyboxConfig": {},
+  "landscapeTerrain": false,
+  "source": {
+    "origin": "creator-hub",
+    "projectId": "15c37491-6bdf-448f-99ae-127e4e9d4768"
+  }
+}
