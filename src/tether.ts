@@ -5,11 +5,15 @@
  * Every frame:
  *  1. Find the local player's position and their tethered partner's position.
  *  2. If distance > MAX_CHAIN_LENGTH, trigger a yank (nudge + stun + broadcast).
- *  3. Update the chain mesh (a cylinder stretched between the two positions).
- *     - Color shifts: green (slack) → yellow (taut) → red (about to yank)
+ *  3. Update the chain mesh — a cylinder with a seamless chain-link texture
+ *     wrapped around it. Y-tiling is scaled to the chain length so links always
+ *     appear correctly sized. AlbedoColor tints the texture for tension feedback.
+ *     - SLACK  → neutral metal tint
+ *     - TAUT   → warm gold tint
+ *     - YANKED → red danger flash
  */
 
-import { engine, Transform, MeshRenderer, Material, VisibilityComponent } from '@dcl/sdk/ecs'
+import { engine, Transform, MeshRenderer, Material, VisibilityComponent, TextureWrapMode, TextureFilterMode, MaterialTransparencyMode } from '@dcl/sdk/ecs'
 import { Vector3, Color4, Quaternion } from '@dcl/sdk/math'
 import { movePlayerTo } from '~system/RestrictedActions'
 import { gameState, broadcastYank } from './gameState'
@@ -18,7 +22,11 @@ import { getProxyEntity } from './playerSync'
 // ─── Config ───────────────────────────────────────────────────────────────────
 const MAX_CHAIN_LENGTH = 4.0    // max chain length in meters
 const PULL_INTERVAL = 0.25   // seconds between continuous elastic pulls
-const CHAIN_RADIUS = 0.06   // visual chain tube radius
+const CHAIN_RADIUS = 0.18   // visual chain width (each plane = CHAIN_RADIUS * 2 wide)
+
+// ─── Texture ──────────────────────────────────────────────────────────────────
+const CHAIN_TEXTURE_SRC = 'assets/textures/Chain.png'
+const LINKS_PER_METER = 1.8  // link-pairs per metre of chain
 
 // ─── Skin definitions ─────────────────────────────────────────────────────────
 const SKIN_SLACK_COLORS: Color4[] = [
@@ -37,29 +45,50 @@ const SKIN_YANK_COLORS: Color4[] = [
   Color4.create(1.0, 0.0, 0.5, 1)    // 2: Neon  — hot pink
 ]
 
-// ─── Chain visual entity (one per session, recycled) ─────────────────────────
-let chainEntity: ReturnType<typeof engine.addEntity> | null = null
+// ─── Chain visual entities: two crossed flat planes for all-angle visibility ──
+// Plane A is wide on X (visible when looking from ±Z)
+// Plane B is wide on Z (visible when looking from ±X)
+// Together they form a cross that shows the chain from every horizontal angle.
+type ChainEntity = ReturnType<typeof engine.addEntity>
+let chainPlaneA: ChainEntity | null = null
+let chainPlaneB: ChainEntity | null = null
 let pullCooldownTimer = 0
 
-function ensureChainEntity() {
-  if (chainEntity) return
-  chainEntity = engine.addEntity()
-  Transform.create(chainEntity, {
-    position: Vector3.create(8, 1, 8),
-    scale: Vector3.create(1, 1, 1)
-  })
-  
-  // Set default cylinder (radius 0.5, diameter 1.0) so our Transform scale 
-  // explicitly controls the visual thickness reliably across SDK versions.
-  MeshRenderer.setCylinder(chainEntity)
-  
-  Material.setPbrMaterial(chainEntity, {
-    albedoColor: SKIN_SLACK_COLORS[0],
+const PLANE_DEPTH = 0.018  // thin axis of each plane — just enough to prevent z-fighting
+
+function createChainPlane(): ChainEntity {
+  const e = engine.addEntity()
+  Transform.create(e, { position: Vector3.create(8, 1, 8), scale: Vector3.create(1, 1, 1) })
+  MeshRenderer.setBox(e)
+  Material.setPbrMaterial(e, {
+    texture: Material.Texture.Common({
+      src: CHAIN_TEXTURE_SRC,
+      wrapMode: TextureWrapMode.TWM_REPEAT,
+      filterMode: TextureFilterMode.TFM_BILINEAR,
+      tiling: { x: 1, y: LINKS_PER_METER }
+    }),
+    albedoColor: Color4.create(1, 1, 1, 1),
     metallic: 0.6,
-    roughness: 0.3,
-    emissiveColor: Color4.create(0, 0, 0, 0)
+    roughness: 0.35,
+    transparencyMode: MaterialTransparencyMode.MTM_ALPHA_BLEND
   })
-  VisibilityComponent.create(chainEntity, { visible: false })
+  VisibilityComponent.create(e, { visible: false })
+  return e
+}
+
+function ensureChainPlanes() {
+  if (!chainPlaneA) chainPlaneA = createChainPlane()
+  if (!chainPlaneB) chainPlaneB = createChainPlane()
+}
+
+function setChainPlanesVisible(visible: boolean) {
+  if (chainPlaneA) VisibilityComponent.getMutable(chainPlaneA).visible = visible
+  if (chainPlaneB) VisibilityComponent.getMutable(chainPlaneB).visible = visible
+}
+
+function applyChainMaterial(mat: Parameters<typeof Material.setPbrMaterial>[1]) {
+  if (chainPlaneA) Material.setPbrMaterial(chainPlaneA, mat)
+  if (chainPlaneB) Material.setPbrMaterial(chainPlaneB, mat)
 }
 
 // ─── Public state readable by HUD ────────────────────────────────────────────
@@ -70,7 +99,7 @@ export const tetherState = {
 
 // ─── System ───────────────────────────────────────────────────────────────────
 export function tetherSystem(dt: number) {
-  ensureChainEntity()
+  ensureChainPlanes()
 
   // Tick pull timer
   if (pullCooldownTimer > 0) {
@@ -79,10 +108,7 @@ export function tetherSystem(dt: number) {
 
   // Render tether whenever we have a partner (in LOBBY, COUNTDOWN, and RUNNING)
   if (!gameState.partnerId) {
-    if (chainEntity) {
-      const vis = VisibilityComponent.getMutable(chainEntity)
-      vis.visible = false
-    }
+    setChainPlanesVisible(false)
     tetherState.tension = 'SLACK'
     return
   }
@@ -111,34 +137,34 @@ export function tetherSystem(dt: number) {
   const dist = Vector3.distance(myPos, partnerPos)
   tetherState.distanceToPartner = dist
 
-  // ── Update chain visual ──────────────────────────────────────────────────
-  const chainVis = VisibilityComponent.getMutable(chainEntity!)
-  chainVis.visible = true
+  // ── Position & orient the two chain planes ───────────────────────────────
+  setChainPlanesVisible(true)
 
-  // Adjust Y to chest height (~1.25 meters up from feet)
+  // Chest attachment points (~1.25 m above feet)
   const myChest = Vector3.create(myPos.x, myPos.y + 1.25, myPos.z)
   const partnerChest = Vector3.create(partnerPos.x, partnerPos.y + 1.25, partnerPos.z)
-
   const midpoint = Vector3.scale(Vector3.add(myChest, partnerChest), 0.5)
-
-  const chainTransform = Transform.getMutable(chainEntity!)
-  chainTransform.position = midpoint
-
-  // Full length cylinder between player chest points
-  // Scale X and Z to make the cylinder thin, Y to match distance.
-  chainTransform.scale = Vector3.create(CHAIN_RADIUS * 2, Math.max(dist, 0.1), CHAIN_RADIUS * 2)
-
-  // Rotate cylinder: in DCL primitive cylinder default axis is +Y.
-  // Rotating -90deg on X maps local +Y to +Z (which lookRotation points along dir).
-  // If distance is extremely small, keep previous rotation to avoid snapping issues.
   const dir = Vector3.subtract(partnerChest, myChest)
+
+  // Base rotation: aligns local Y to chain direction
+  let baseRot = Quaternion.Identity()
   if (Vector3.lengthSquared(dir) > 0.0001) {
     const lookRot = Quaternion.lookRotation(Vector3.normalize(dir), Vector3.Up())
-    chainTransform.rotation = Quaternion.multiply(
-      lookRot,
-      Quaternion.fromEulerDegrees(-90, 0, 0)
-    )
+    baseRot = Quaternion.multiply(lookRot, Quaternion.fromEulerDegrees(-90, 0, 0))
   }
+
+  // Plane A: wide on X, thin on Z  → visible when looking from ±Z
+  const tfA = Transform.getMutable(chainPlaneA!)
+  tfA.position = midpoint
+  tfA.rotation = baseRot
+  tfA.scale = Vector3.create(CHAIN_RADIUS * 2, Math.max(dist, 0.1), PLANE_DEPTH)
+
+  // Plane B: wide on Z, thin on X  → visible when looking from ±X
+  // We rotate it 90° around the chain axis (local Y) so it's perpendicular to Plane A
+  const tfB = Transform.getMutable(chainPlaneB!)
+  tfB.position = midpoint
+  tfB.rotation = Quaternion.multiply(baseRot, Quaternion.fromEulerDegrees(0, 90, 0))
+  tfB.scale = Vector3.create(CHAIN_RADIUS * 2, Math.max(dist, 0.1), PLANE_DEPTH)
 
   // ── Color by tension ────────────────────────────────────────────────────
   const skin = gameState.tetherSkinIndex
@@ -168,12 +194,45 @@ export function tetherSystem(dt: number) {
     tetherState.tension = 'SLACK'
   }
 
-  Material.setPbrMaterial(chainEntity!, {
-    albedoColor: chainColor,
-    metallic: skin === 0 ? 0.8 : 0.1,
-    roughness: skin === 1 ? 0.9 : 0.2,
-    emissiveColor: emissive
-  })
+  // ── Apply material to both planes ───────────────────────────────────────
+  const tilingY = Math.max(dist, 0.1) * LINKS_PER_METER
+
+  if (skin === 0) {
+    // Chain skin — texture with emissive tension overlay
+    const tensionEmissive = dist >= MAX_CHAIN_LENGTH
+      ? Color4.create(1.0, 0.05, 0.05, 1)
+      : ratio > 0.7
+        ? Color4.create((ratio - 0.7) / 0.3 * 0.8, (ratio - 0.7) / 0.3 * 0.4, 0, 1)
+        : Color4.create(0, 0, 0, 0)
+    const tensionEmissiveIntensity = dist >= MAX_CHAIN_LENGTH ? 2.5 : ratio > 0.7 ? 1.2 : 0
+
+    applyChainMaterial({
+      texture: Material.Texture.Common({
+        src: CHAIN_TEXTURE_SRC,
+        wrapMode: TextureWrapMode.TWM_REPEAT,
+        filterMode: TextureFilterMode.TFM_BILINEAR,
+        tiling: { x: 1, y: tilingY }
+      }),
+      albedoColor: Color4.create(1, 1, 1, 1),
+      metallic: 0.75,
+      roughness: 0.25,
+      transparencyMode: MaterialTransparencyMode.MTM_ALPHA_BLEND,
+      emissiveColor: tensionEmissive,
+      emissiveIntensity: tensionEmissiveIntensity
+    })
+  } else if (skin === 1) {
+    // Rope skin — plain colour, rough
+    applyChainMaterial({ albedoColor: chainColor, metallic: 0.0, roughness: 0.9, emissiveColor: emissive })
+  } else {
+    // Neon skin — emissive glow
+    applyChainMaterial({
+      albedoColor: chainColor,
+      metallic: 0.0,
+      roughness: 0.1,
+      emissiveColor: Color4.create(chainColor.r, chainColor.g, chainColor.b, 1),
+      emissiveIntensity: 3.0
+    })
+  }
 
   // ── Responsive Elastic Tether & Dangling Physics ─────────────────────────
   const yDiff = myPos.y - partnerPos.y
@@ -234,10 +293,7 @@ export function setChainSkin(index: number) {
 
 /** Called on finish or reset — hides the chain */
 export function hideChain() {
-  if (chainEntity) {
-    const vis = VisibilityComponent.getMutable(chainEntity)
-    vis.visible = false
-  }
+  setChainPlanesVisible(false)
   tetherState.tension = 'SLACK'
   pullCooldownTimer = 0
 }

@@ -478,35 +478,35 @@
             "disablePortableExperiences": false,
             "spawnPoints": [
               {
-                "name": "SpawnArea1",
+                "name": "LobbyWaitingLounge",
                 "default": true,
                 "position": {
                   "x": {
                     "$case": "range",
                     "value": [
-                      0,
-                      3
+                      7,
+                      9
                     ]
                   },
                   "y": {
                     "$case": "range",
                     "value": [
-                      0,
-                      0
+                      1.6,
+                      1.6
                     ]
                   },
                   "z": {
                     "$case": "range",
                     "value": [
-                      0,
-                      3
+                      0.4,
+                      0.8
                     ]
                   }
                 },
                 "cameraTarget": {
                   "x": 8,
-                  "y": 1,
-                  "z": 8
+                  "y": 2.5,
+                  "z": 6
                 }
               }
             ],

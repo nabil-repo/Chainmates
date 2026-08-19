@@ -25,6 +25,12 @@ export const COL_NEON_GOLD = Color4.create(1.0, 0.78, 0.15, 1)
 export const COL_NEON_MAGENTA = Color4.create(0.9, 0.25, 0.85, 1)
 export const COL_NEON_GREEN = Color4.create(0.15, 1.0, 0.55, 1)
 
+/** Cycling palette for platform neon trim */
+const NEON_TRIM_COLORS = [COL_NEON_CYAN, COL_NEON_MAGENTA, COL_NEON_GOLD, COL_NEON_GREEN]
+
+/** Every Nth platform in the pool oscillates on the X-axis (skip index 0) */
+const MOVING_PLATFORM_INTERVAL = 3
+
 // ─── Platform Pool Configuration ──────────────────────────────────────────────
 export const POOL_SIZE = 8
 export const PLATFORM_SPACING_Y = 1.3 // height increase per step
@@ -42,9 +48,12 @@ export const SPIRAL_POINTS = [
 export interface RecycledPlatform {
   entity: ReturnType<typeof engine.addEntity>
   labelEntity: ReturnType<typeof engine.addEntity>
+  /** Four neon trim entities: [rightX, leftX, farZ, nearZ] */
+  trimEntities: ReturnType<typeof engine.addEntity>[]
   baseY: number
   slotIndex: number
   altitudeTier: number
+  isMoving: boolean
 }
 
 export const platformPool: RecycledPlatform[] = []
@@ -75,6 +84,102 @@ export function makePlatform(
   return e
 }
 
+// ─── Neon Trim Helper ────────────────────────────────────────────────────
+/**
+ * Creates four thin emissive neon strips on the SIDES of a platform.
+ * Strips protrude outward from the side faces so the top walking surface
+ * is completely unobstructed — players cannot get caught on them.
+ * Returns [rightX, leftX, farZ, nearZ] trim entities.
+ */
+export function makeNeonTrim(
+  cx: number,
+  platformY: number,
+  cz: number,
+  sx: number,
+  sz: number,
+  neonColor: Color4
+): ReturnType<typeof engine.addEntity>[] {
+  const T = 0.07   // how far strip protrudes from the side face
+  const TH = 0.5    // strip height matches platform height (sy = 0.5)
+  // Strips sit on the SIDE faces at platform mid-height — NOT on top
+  const sideY = platformY
+
+  const mat = {
+    albedoColor: Color4.create(neonColor.r * 0.2, neonColor.g * 0.2, neonColor.b * 0.2, 1),
+    emissiveColor: neonColor,
+    emissiveIntensity: 2.0,
+    metallic: 0.0,
+    roughness: 1.0
+  }
+
+  // Right (+X) side — protrudes outward in +X
+  const eR = engine.addEntity()
+  Transform.create(eR, {
+    position: Vector3.create(cx + sx * 0.5 + T * 0.5, sideY, cz),
+    scale: Vector3.create(T, TH, sz)
+  })
+  MeshRenderer.setBox(eR)
+  Material.setPbrMaterial(eR, mat)
+
+  // Left (-X) side — protrudes outward in -X
+  const eL = engine.addEntity()
+  Transform.create(eL, {
+    position: Vector3.create(cx - sx * 0.5 - T * 0.5, sideY, cz),
+    scale: Vector3.create(T, TH, sz)
+  })
+  MeshRenderer.setBox(eL)
+  Material.setPbrMaterial(eL, mat)
+
+  // Far (+Z) side — protrudes outward in +Z
+  const eF = engine.addEntity()
+  Transform.create(eF, {
+    position: Vector3.create(cx, sideY, cz + sz * 0.5 + T * 0.5),
+    scale: Vector3.create(sx + T * 2, TH, T)
+  })
+  MeshRenderer.setBox(eF)
+  Material.setPbrMaterial(eF, mat)
+
+  // Near (-Z) side — protrudes outward in -Z
+  const eN = engine.addEntity()
+  Transform.create(eN, {
+    position: Vector3.create(cx, sideY, cz - sz * 0.5 - T * 0.5),
+    scale: Vector3.create(sx + T * 2, TH, T)
+  })
+  MeshRenderer.setBox(eN)
+  Material.setPbrMaterial(eN, mat)
+
+  return [eR, eL, eF, eN]
+}
+
+/**
+ * Repositions neon trim strips when a platform is recycled to a new position.
+ * trimEntities must be [rightX, leftX, farZ, nearZ] as returned by makeNeonTrim.
+ */
+export function repositionTrim(
+  trimEntities: ReturnType<typeof engine.addEntity>[],
+  cx: number,
+  platformY: number,
+  sx: number,
+  cz: number,
+  sz: number
+) {
+  if (!trimEntities || trimEntities.length < 4) return
+  const T = 0.07
+  const sideY = platformY
+
+  const tR = Transform.getMutable(trimEntities[0])
+  tR.position = Vector3.create(cx + sx * 0.5 + T * 0.5, sideY, cz)
+
+  const tL = Transform.getMutable(trimEntities[1])
+  tL.position = Vector3.create(cx - sx * 0.5 - T * 0.5, sideY, cz)
+
+  const tF = Transform.getMutable(trimEntities[2])
+  tF.position = Vector3.create(cx, sideY, cz + sz * 0.5 + T * 0.5)
+
+  const tN = Transform.getMutable(trimEntities[3])
+  tN.position = Vector3.create(cx, sideY, cz - sz * 0.5 - T * 0.5)
+}
+
 // ─── Build Course ─────────────────────────────────────────────────────────────
 export function buildCourse() {
   buildMoltenLavaAbyss()
@@ -102,6 +207,8 @@ function buildMoltenLavaAbyss() {
 function buildStartIsland() {
   // 1. Lobby Waiting Lounge (where unassigned / pre-game players hang out)
   makePlatform(8.0, 1.0, 0.6, 9.0, 0.5, 2.4, Color4.create(0.08, 0.10, 0.20, 1))
+  // Neon trim on the lounge platform
+  makeNeonTrim(8.0, 1.0, 0.6, 9.0, 2.4, COL_NEON_CYAN)
 
   // Waiting Lounge Holographic Sign
   const loungeSign = engine.addEntity()
@@ -115,6 +222,8 @@ function buildStartIsland() {
 
   // 2. Active Course Launchpad (where the squad spawns when the run starts)
   makePlatform(8.0, 2.0, 3.0, 7.5, 0.5, 2.8, COL_FLOATING_STONE)
+  // Neon trim on launchpad — gold accent
+  makeNeonTrim(8.0, 2.0, 3.0, 7.5, 2.8, COL_NEON_GOLD)
 
   // Launchpad Gateway Pylons
   makePlatform(4.6, 3.6, 2.0, 0.3, 3.0, 0.3, COL_NEON_CYAN)
@@ -136,6 +245,8 @@ function buildInfinitePlatformPool() {
   for (let i = 0; i < POOL_SIZE; i++) {
     const slot = SPIRAL_POINTS[i]
     const initialY = 3.2 + i * PLATFORM_SPACING_Y
+    const isMoving = i !== 0 && (i % MOVING_PLATFORM_INTERVAL) === 0
+    const neonColor = NEON_TRIM_COLORS[i % NEON_TRIM_COLORS.length]
 
     const entity = engine.addEntity()
     Transform.create(entity, {
@@ -149,6 +260,20 @@ function buildInfinitePlatformPool() {
       metallic: 0.5,
       roughness: 0.4
     })
+
+    // Neon trim on every platform
+    const trimEntities = makeNeonTrim(slot.x, initialY, slot.z, slot.sx, slot.sz, neonColor)
+
+    // Attach MovingPlatform component to oscillating platforms
+    if (isMoving) {
+      MovingPlatform.create(entity, {
+        originX: slot.x,
+        originZ: slot.z,
+        amplitude: 1.8,   // ±1.8 m X swing
+        period: 3.5,   // seconds per full cycle
+        elapsed: i * 0.7  // stagger start phase
+      })
+    }
 
     // Floating Height Badge above each platform
     const label = engine.addEntity()
@@ -165,9 +290,11 @@ function buildInfinitePlatformPool() {
     platformPool.push({
       entity,
       labelEntity: label,
+      trimEntities,
       baseY: initialY,
       slotIndex: i,
-      altitudeTier: 0
+      altitudeTier: 0,
+      isMoving
     })
   }
 }
@@ -178,7 +305,7 @@ export function resetPlatformPool() {
     const p = platformPool[i]
     const slot = SPIRAL_POINTS[p.slotIndex]
     const initialY = 3.2 + i * PLATFORM_SPACING_Y
-    
+
     p.baseY = initialY
     p.altitudeTier = 0
 
@@ -190,5 +317,16 @@ export function resetPlatformPool() {
 
     const labelShape = TextShape.getMutable(p.labelEntity)
     labelShape.text = `${Math.round(initialY - 2.0)}m`
+
+    // Reset trim strips back to initial slot positions
+    repositionTrim(p.trimEntities, slot.x, initialY, slot.sx, slot.z, slot.sz)
+
+    // Reset moving platform oscillation state
+    if (p.isMoving && MovingPlatform.has(p.entity)) {
+      const mp = MovingPlatform.getMutable(p.entity)
+      mp.originX = slot.x
+      mp.originZ = slot.z
+      mp.elapsed = i * 0.7
+    }
   }
 }

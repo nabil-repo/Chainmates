@@ -18,6 +18,7 @@ import { engine, executeTask, EngineInfo } from '@dcl/sdk/ecs'
 import {
   gameState,
   updateGameState,
+  updateControlsForPhase,
   bus
 } from './gameState'
 
@@ -76,10 +77,11 @@ export function main() {
     }
   })
 
-  // 3. Build the world
+  // 3. Build the world & disable movement controls until active climb
   buildCourse()
   setupHud()
   setupUi()
+  updateControlsForPhase('LOBBY')
 
   // 4. Register all systems
   //    Priority: lower number = runs earlier

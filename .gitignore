@@ -34,3 +34,5 @@ Thumbs.db
 .env
 .env.local
 .env.*.local
+
+generate_icons.ps1

@@ -9,7 +9,7 @@
  */
 
 import { MessageBus } from '@dcl/sdk/message-bus'
-import { EngineInfo, engine, Transform } from '@dcl/sdk/ecs'
+import { EngineInfo, engine, Transform, InputModifier } from '@dcl/sdk/ecs'
 import { movePlayerTo } from '~system/RestrictedActions'
 import { resetPlatformPool } from './course'
 
@@ -178,6 +178,36 @@ bus.on('cm:tether_leave', (data: TetherLeaveMsg) => {
   }
 })
 
+/**
+ * Enables or disables player movement controls (WASD/arrows/jump on PC, joystick/jump on mobile)
+ * Controls are disabled until the game starts (RUNNING phase).
+ */
+export function updateControlsForPhase(phase: GamePhase) {
+  if (phase === 'RUNNING') {
+    InputModifier.createOrReplace(engine.PlayerEntity, {
+      mode: InputModifier.Mode.Standard({
+        disableAll: false,
+        disableWalk: false,
+        disableJog: false,
+        disableRun: false,
+        disableJump: false,
+        disableEmote: false
+      })
+    })
+  } else {
+    InputModifier.createOrReplace(engine.PlayerEntity, {
+      mode: InputModifier.Mode.Standard({
+        disableAll: true,
+        disableWalk: true,
+        disableJog: true,
+        disableRun: true,
+        disableJump: true,
+        disableEmote: true
+      })
+    })
+  }
+}
+
 // Phase sync: only react if the message is for our squad
 bus.on('cm:phase', (data: PhaseMsg) => {
   if (data.teamId && !data.teamId.includes(gameState.localId)) {
@@ -185,6 +215,8 @@ bus.on('cm:phase', (data: PhaseMsg) => {
   }
 
   gameState.phase = data.phase
+  updateControlsForPhase(data.phase)
+
   if (data.phase === 'LOBBY') {
     resetClimbState()
     lockedSpawnPos = null
@@ -216,6 +248,7 @@ bus.on('cm:game_over', (data: GameOverMsg) => {
   }
 
   gameState.phase = 'GAME_OVER'
+  updateControlsForPhase('GAME_OVER')
   gameState.gameOverReason = `${data.fallerName} fell into the molten lava!`
   gameState.finalScore = data.teamScore
   gameState.finalAltitude = data.maxAltitude
@@ -310,6 +343,7 @@ export function startRun() {
   if (!gameState.partnerId) return // must have chosen and accepted partner!
 
   gameState.phase = 'COUNTDOWN'
+  updateControlsForPhase('COUNTDOWN')
   gameState.countdownValue = 3
   countdownTimer = 0
   gameState.onPhaseChange?.('COUNTDOWN')
@@ -357,6 +391,7 @@ export function updateGameState(dt: number) {
 
       if (gameState.countdownValue <= 0) {
         gameState.phase = 'RUNNING'
+        updateControlsForPhase('RUNNING')
         lockedSpawnPos = null
         const engineInfo = EngineInfo.getOrNull(engine.RootEntity)
         gameState.runStartRuntime = engineInfo ? engineInfo.totalRuntime : 0
@@ -420,6 +455,7 @@ export function updateGameState(dt: number) {
 export function triggerGameOver() {
   if (gameState.phase !== 'RUNNING') return
   gameState.phase = 'GAME_OVER'
+  updateControlsForPhase('GAME_OVER')
   gameState.gameOverReason = `${gameState.localName} plunged into the molten lava!`
   gameState.finalScore = gameState.teamScore
   gameState.finalAltitude = gameState.maxAltitude
@@ -447,6 +483,7 @@ export function triggerGameOver() {
 /** Reset back to lobby after a run or game over */
 export function resetToLobby() {
   gameState.phase = 'LOBBY'
+  updateControlsForPhase('LOBBY')
   resetClimbState()
 
   // Teleport back to waiting lounge

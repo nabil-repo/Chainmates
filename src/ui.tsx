@@ -1,12 +1,13 @@
 /**
- * ui.tsx
- * Ultra-Polished, Responsive UI for Chainmates Endless Co-op Climb.
+ * ui.tsx — Chainmates Endless Co-op Climb
+ * Ultra-Polished Gaming UI/UX with Crisp, Large Lucide Iconography & Readable Fonts.
  *
  * Design features:
- *  - Modern gaming typography (clean labels, no noisy emoji artifacts)
- *  - Responsive glassmorphism cards with crisp contrast
- *  - Clear stat grid & leaderboard hierarchy
- *  - Mobile-first layout with ≥54px touch targets & screenInset: 'interactable'
+ *  - High-visibility typography & scaled touch/readability targets
+ *  - Crisp vector Lucide outline icons rendered via Texture assets
+ *  - Gaming typography: clean sans-serif for UI chrome & monospace for numbers
+ *  - Main Menu Squad Leaderboard button & dedicated popup modal
+ *  - Dynamic Tether Tension indicator & Danger HUD ribbons
  */
 
 import ReactEcs, { ReactEcsRenderer, UiEntity, Label, Button } from '@dcl/sdk/react-ecs'
@@ -25,30 +26,60 @@ import {
 import { setChainSkin, tetherState } from './tether'
 
 // ─── Design Tokens & Theme ───────────────────────────────────────────────────
-const THEME = {
-  bgOverlay: Color4.create(0.02, 0.03, 0.08, 0.88),
-  cardBg: Color4.create(0.06, 0.08, 0.16, 0.96),
-  cardHeader: Color4.create(0.09, 0.12, 0.22, 1.0),
-  statBoxBg: Color4.create(0.04, 0.05, 0.11, 0.90),
-  rowAltBg: Color4.create(0.10, 0.14, 0.26, 0.50),
-  borderCyan: Color4.create(0.15, 0.85, 1.0, 0.8),
+const C = {
+  // Backgrounds & Panels
+  bgBackdrop:  Color4.create(0.02, 0.03, 0.07, 0.90),
+  cardBg:      Color4.create(0.05, 0.07, 0.14, 0.98),
+  cardHeader:  Color4.create(0.08, 0.11, 0.22, 1.0),
+  panelBg:     Color4.create(0.03, 0.04, 0.09, 0.95),
+  subPanel:    Color4.create(0.07, 0.09, 0.18, 0.92),
+  insetBg:     Color4.create(0.02, 0.02, 0.05, 0.98),
 
   // Accents
-  cyan: Color4.create(0.15, 0.85, 1.0, 1),
-  cyanDim: Color4.create(0.10, 0.35, 0.55, 1),
-  gold: Color4.create(1.0, 0.80, 0.15, 1),
-  emerald: Color4.create(0.15, 1.0, 0.55, 1),
-  red: Color4.create(1.0, 0.22, 0.22, 1),
-  orange: Color4.create(1.0, 0.45, 0.10, 1),
+  cyan:        Color4.create(0.12, 0.85, 1.0, 1.0),
+  cyanDim:     Color4.create(0.08, 0.32, 0.48, 1.0),
+  cyanGlow:    Color4.create(0.12, 0.85, 1.0, 0.25),
+  gold:        Color4.create(1.0, 0.80, 0.15, 1.0),
+  goldDim:     Color4.create(0.45, 0.35, 0.05, 1.0),
+  emerald:     Color4.create(0.10, 0.95, 0.50, 1.0),
+  emeraldDim:  Color4.create(0.05, 0.35, 0.18, 1.0),
+  red:         Color4.create(1.0, 0.22, 0.22, 1.0),
+  redDark:     Color4.create(0.35, 0.04, 0.04, 0.95),
+  orange:      Color4.create(1.0, 0.50, 0.10, 1.0),
+  purple:      Color4.create(0.70, 0.25, 1.0, 1.0),
 
-  // Typography
-  textPrimary: Color4.White(),
-  textSecondary: Color4.create(0.70, 0.75, 0.85, 1),
-  textMuted: Color4.create(0.45, 0.50, 0.62, 1),
+  // Text colors
+  textWhite:   Color4.White(),
+  textDim:     Color4.create(0.78, 0.84, 0.94, 1.0),
+  textMuted:   Color4.create(0.50, 0.58, 0.70, 1.0),
   transparent: Color4.create(0, 0, 0, 0)
 }
 
-// ─── UI State ─────────────────────────────────────────────────────────────────
+// ─── Lucide Icon Component ────────────────────────────────────────────────────
+export const Icon = (props: {
+  src: string
+  size?: number
+  color?: Color4
+  margin?: { right?: number; left?: number; top?: number; bottom?: number }
+}) => {
+  const s = props.size ?? 24
+  return (
+    <UiEntity
+      uiTransform={{
+        width: s,
+        height: s,
+        margin: props.margin
+      }}
+      uiBackground={{
+        textureMode: 'stretch',
+        texture: { src: props.src },
+        color: props.color ?? Color4.White()
+      }}
+    />
+  )
+}
+
+// ─── Reactive UI State ────────────────────────────────────────────────────────
 let uiState = {
   phase: 'LOBBY' as GamePhase,
   countdown: 3,
@@ -57,7 +88,8 @@ let uiState = {
   elapsedFormatted: '0:00.00',
   yankFlash: false,
   playerCount: 1,
-  renderTick: 0
+  renderTick: 0,
+  showLeaderboardModal: false
 }
 
 export function setUiPhase(phase: GamePhase) { uiState.phase = phase }
@@ -68,16 +100,173 @@ export function updateUiEach(ms: number) { uiState.elapsedFormatted = formatTime
 
 // ─── Milestone Tier Calculator ────────────────────────────────────────────────
 function getTierInfo(alt: number) {
-  if (alt >= 200) return { title: 'DIAMOND ESCAPERS', badge: 'TIER IV', color: THEME.cyan }
-  if (alt >= 100) return { title: 'GOLD CLIMBERS', badge: 'TIER III', color: THEME.gold }
-  if (alt >= 50) return { title: 'SILVER CLIMBERS', badge: 'TIER II', color: THEME.textSecondary }
-  if (alt >= 25) return { title: 'BRONZE CLIMBERS', badge: 'TIER I', color: THEME.orange }
-  return { title: 'ROOKIE SQUAD', badge: 'NOVICE', color: THEME.textMuted }
+  if (alt >= 200) return { icon: 'assets/icons/diamond.png', title: 'DIAMOND ESCAPERS', badge: 'TIER IV', color: C.cyan }
+  if (alt >= 100) return { icon: 'assets/icons/trophy.png',  title: 'GOLD CLIMBERS',    badge: 'TIER III', color: C.gold }
+  if (alt >= 50)  return { icon: 'assets/icons/medal.png',   title: 'SILVER CLIMBERS',  badge: 'TIER II', color: C.textDim }
+  if (alt >= 25)  return { icon: 'assets/icons/mountain.png',title: 'BRONZE CLIMBERS',  badge: 'TIER I', color: C.orange }
+  return               { icon: 'assets/icons/user.png',    title: 'ROOKIE SQUAD',     badge: 'NOVICE', color: C.textMuted }
 }
 
-// ─── UI Components ────────────────────────────────────────────────────────────
+// ─── Reusable Stat Box (HUD & GameOver) ───────────────────────────────────────
+const StatBox = (props: { icon: string; label: string; value: string; color: Color4; isMono?: boolean }) => (
+  <UiEntity
+    uiTransform={{
+      flexDirection: 'column',
+      alignItems: 'center',
+      padding: { left: 16, right: 16, top: 10, bottom: 10 }
+    }}
+    uiBackground={{ color: C.panelBg }}
+  >
+    <UiEntity uiTransform={{ flexDirection: 'row', alignItems: 'center', margin: { bottom: 4 } }}>
+      <Icon src={props.icon} size={18} color={props.color} margin={{ right: 6 }} />
+      <Label value={props.label} fontSize={13} color={C.textMuted} font='sans-serif' />
+    </UiEntity>
+    <Label
+      value={props.value}
+      fontSize={26}
+      color={props.color}
+      font={props.isMono ? 'monospace' : 'sans-serif'}
+    />
+  </UiEntity>
+)
 
-/** 1. Lobby Screen with Player Selection & Squad Pairing */
+// ─── Reusable Vertical Separator ──────────────────────────────────────────────
+const VDivider = () => (
+  <UiEntity
+    uiTransform={{ width: 2, height: '75%', margin: { left: 4, right: 4 }, alignSelf: 'center' }}
+    uiBackground={{ color: Color4.create(0.15, 0.85, 1.0, 0.2) }}
+  />
+)
+
+// ─── Standalone Leaderboard Modal ─────────────────────────────────────────────
+const LeaderboardModal = () => (
+  <UiEntity
+    uiTransform={{
+      width: '100%',
+      height: '100%',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 20
+    }}
+    uiBackground={{ color: C.bgBackdrop }}
+  >
+    <UiEntity
+      uiTransform={{
+        width: 620,
+        flexDirection: 'column',
+        alignItems: 'center'
+      }}
+      uiBackground={{ color: C.cardBg }}
+    >
+      {/* Header */}
+      <UiEntity
+        uiTransform={{
+          width: '100%',
+          flexDirection: 'column',
+          alignItems: 'center',
+          padding: { top: 24, bottom: 18, left: 20, right: 20 }
+        }}
+        uiBackground={{ color: C.cardHeader }}
+      >
+        <UiEntity uiTransform={{ flexDirection: 'row', alignItems: 'center', margin: { bottom: 4 } }}>
+          <Icon src='assets/icons/crown.png' size={32} color={C.gold} margin={{ right: 10 }} />
+          <Label value='SQUAD LEADERBOARD' fontSize={32} color={C.gold} font='sans-serif' />
+        </UiEntity>
+        <Label
+          value='ALL-TIME CO-OP SURVIVAL & ALTITUDE RECORDS'
+          fontSize={14}
+          color={C.textMuted}
+          font='sans-serif'
+        />
+      </UiEntity>
+
+      {/* Content */}
+      <UiEntity
+        uiTransform={{
+          width: '100%',
+          flexDirection: 'column',
+          padding: { left: 24, right: 24, top: 20, bottom: 24 }
+        }}
+      >
+        {/* Leaderboard Table */}
+        <UiEntity
+          uiTransform={{
+            width: '100%',
+            flexDirection: 'column',
+            padding: { left: 16, right: 16, top: 14, bottom: 14 },
+            margin: { bottom: 20 }
+          }}
+          uiBackground={{ color: C.panelBg }}
+        >
+          {uiState.leaderboard.length === 0 ? (
+            <Label
+              value='No squad records yet. Form a squad and climb to claim #1!'
+              fontSize={16}
+              color={C.textMuted}
+              font='sans-serif'
+              uiTransform={{ margin: { top: 16, bottom: 16 } }}
+            />
+          ) : (
+            uiState.leaderboard.slice(0, 6).map((entry, i) => {
+              const entryColor = i === 0 ? C.gold : i === 1 ? C.cyan : i === 2 ? C.orange : C.textWhite
+              const medalIcon =
+                i === 0
+                  ? 'assets/icons/crown.png'
+                  : i === 1 || i === 2
+                    ? 'assets/icons/medal.png'
+                    : 'assets/icons/user.png'
+
+              return (
+                <UiEntity
+                  key={`modal-lb-${i}`}
+                  uiTransform={{
+                    width: '100%',
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: { top: 8, bottom: 8, left: 8, right: 8 }
+                  }}
+                  uiBackground={{ color: i % 2 === 1 ? Color4.create(0.08, 0.12, 0.22, 0.45) : C.transparent }}
+                >
+                  <UiEntity uiTransform={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Icon src={medalIcon} size={20} color={entryColor} margin={{ right: 10 }} />
+                    <Label value={`#${i + 1}  ${entry.displayName}`} fontSize={16} color={entryColor} font='sans-serif' />
+                  </UiEntity>
+                  <Label
+                    value={`${entry.teamScore} PTS  (${entry.maxAltitude}M)`}
+                    fontSize={16}
+                    color={i === 0 ? C.gold : C.textDim}
+                    font='monospace'
+                  />
+                </UiEntity>
+              )
+            })
+          )}
+        </UiEntity>
+
+        {/* Close Button */}
+        <UiEntity
+          uiTransform={{
+            width: '100%',
+            height: 54,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+          uiBackground={{ color: C.cyan }}
+          onMouseDown={() => {
+            uiState.showLeaderboardModal = false
+          }}
+        >
+          <Icon src='assets/icons/x.png' size={20} color={C.insetBg} margin={{ right: 10 }} />
+          <Label value='CLOSE LEADERBOARD' fontSize={17} color={C.insetBg} font='sans-serif' />
+        </UiEntity>
+      </UiEntity>
+    </UiEntity>
+  </UiEntity>
+)
+
+// ─── 1. LOBBY SCREEN ──────────────────────────────────────────────────────────
 const LobbyScreen = () => {
   const isPaired = !!gameState.partnerId
   const availablePlayers = Array.from(gameState.remotePlayers.values())
@@ -89,204 +278,308 @@ const LobbyScreen = () => {
         height: '100%',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: 16
+        padding: 20
       }}
     >
-      {/* Main Card Modal */}
+      {/* Central Modal Card */}
       <UiEntity
         uiTransform={{
-          width: 480,
+          width: 620,
           flexDirection: 'column',
-          alignItems: 'center',
-          padding: 22
+          alignItems: 'center'
         }}
-        uiBackground={{ color: THEME.cardBg }}
+        uiBackground={{ color: C.cardBg }}
       >
-        {/* Category Pill */}
+        {/* Card Header */}
         <UiEntity
           uiTransform={{
-            padding: { left: 12, right: 12, top: 4, bottom: 4 },
-            margin: { bottom: 6 }
+            width: '100%',
+            flexDirection: 'column',
+            alignItems: 'center',
+            padding: { top: 22, bottom: 18, left: 20, right: 20 }
           }}
-          uiBackground={{ color: THEME.statBoxBg }}
+          uiBackground={{ color: C.cardHeader }}
         >
-          <Label value='CO-OP SURVIVAL // SQUAD LOBBY' fontSize={11} color={THEME.cyan} />
+          <UiEntity uiTransform={{ flexDirection: 'row', alignItems: 'center', margin: { bottom: 4 } }}>
+            <Icon src='assets/icons/link.png' size={32} color={C.cyan} margin={{ right: 10 }} />
+            <Label value='CHAINMATES' fontSize={36} color={C.cyan} font='sans-serif' />
+          </UiEntity>
+          <Label
+            value='CO-OP ENDLESS CLIMB // SQUAD HAVEN'
+            fontSize={14}
+            color={C.textMuted}
+            font='sans-serif'
+          />
         </UiEntity>
 
-        {/* Main Title */}
-        <Label
-          value='CHAINED TOGETHER'
-          fontSize={26}
-          color={THEME.textPrimary}
-          uiTransform={{ margin: { bottom: 2 } }}
-        />
-        <Label
-          value='Pair up with a partner in the scene to climb together.'
-          fontSize={12}
-          color={THEME.textSecondary}
-          uiTransform={{ margin: { bottom: 14 } }}
-        />
+        {/* Card Content Area */}
+        <UiEntity
+          uiTransform={{
+            width: '100%',
+            flexDirection: 'column',
+            padding: { left: 24, right: 24, top: 20, bottom: 24 }
+          }}
+        >
+          {/* Incoming Invite Notification */}
+          {gameState.pendingInvite && !isPaired && (
+            <UiEntity
+              uiTransform={{
+                width: '100%',
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: { left: 16, right: 14, top: 12, bottom: 12 },
+                margin: { bottom: 16 }
+              }}
+              uiBackground={{ color: Color4.create(0.04, 0.28, 0.14, 0.98) }}
+            >
+              <UiEntity uiTransform={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Icon src='assets/icons/bell.png' size={24} color={C.emerald} margin={{ right: 12 }} />
+                <UiEntity uiTransform={{ flexDirection: 'column' }}>
+                  <Label value='SQUAD INVITATION' fontSize={12} color={C.emerald} font='sans-serif' />
+                  <Label value={`from ${gameState.pendingInvite.fromName}`} fontSize={17} color={C.textWhite} font='sans-serif' />
+                </UiEntity>
+              </UiEntity>
 
-        {/* Incoming Invite Alert if any */}
-        {gameState.pendingInvite && !isPaired && (
-          <UiEntity
-            uiTransform={{
-              width: '100%',
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              padding: { left: 12, right: 12, top: 8, bottom: 8 },
-              margin: { bottom: 12 }
-            }}
-            uiBackground={{ color: Color4.create(0.1, 0.4, 0.2, 0.9) }}
-          >
-            <Label value={`INVITE: ${gameState.pendingInvite.fromName}`} fontSize={12} color={THEME.textPrimary} />
-            <Button
-              value='ACCEPT'
-              variant='primary'
-              uiTransform={{ width: 90, height: 36 }}
-              uiBackground={{ color: THEME.emerald }}
-              fontSize={12}
-              color={THEME.cardBg}
-              onMouseDown={() => acceptTether(gameState.pendingInvite!.fromId)}
-            />
-          </UiEntity>
-        )}
-
-        {/* Squad Status / Active Partner */}
-        {isPaired ? (
-          <UiEntity
-            uiTransform={{
-              width: '100%',
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              padding: { left: 14, right: 14, top: 10, bottom: 10 },
-              margin: { bottom: 14 }
-            }}
-            uiBackground={{ color: THEME.statBoxBg }}
-          >
-            <UiEntity uiTransform={{ flexDirection: 'column' }}>
-              <Label value='LINKED SQUAD' fontSize={10} color={THEME.textMuted} />
-              <Label value={`🔗 ${gameState.localName} & ${gameState.partnerName}`} fontSize={14} color={THEME.emerald} />
+              <Button
+                value='ACCEPT'
+                variant='primary'
+                uiTransform={{ width: 120, height: 44 }}
+                uiBackground={{ color: C.emerald }}
+                fontSize={15}
+                color={C.insetBg}
+                onMouseDown={() => acceptTether(gameState.pendingInvite!.fromId)}
+              />
             </UiEntity>
-            <Button
-              value='DISCONNECT'
-              variant='primary'
-              uiTransform={{ width: 110, height: 38 }}
-              uiBackground={{ color: THEME.red }}
-              fontSize={11}
-              color={THEME.textPrimary}
-              onMouseDown={leaveSquad}
+          )}
+
+          {/* Squad Status or Partner Browser */}
+          {isPaired ? (
+            <UiEntity
+              uiTransform={{
+                width: '100%',
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: { left: 18, right: 16, top: 14, bottom: 14 },
+                margin: { bottom: 18 }
+              }}
+              uiBackground={{ color: Color4.create(0.04, 0.22, 0.12, 0.95) }}
+            >
+              <UiEntity uiTransform={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Icon src='assets/icons/link.png' size={26} color={C.emerald} margin={{ right: 12 }} />
+                <UiEntity uiTransform={{ flexDirection: 'column' }}>
+                  <Label value='SQUAD LINKED' fontSize={12} color={C.emerald} font='sans-serif' />
+                  <Label
+                    value={`${gameState.localName} & ${gameState.partnerName}`}
+                    fontSize={18}
+                    color={C.textWhite}
+                    font='sans-serif'
+                  />
+                </UiEntity>
+              </UiEntity>
+
+              <Button
+                value='DISCONNECT'
+                variant='primary'
+                uiTransform={{ width: 130, height: 42 }}
+                uiBackground={{ color: C.red }}
+                fontSize={14}
+                color={C.textWhite}
+                onMouseDown={leaveSquad}
+              />
+            </UiEntity>
+          ) : (
+            <UiEntity
+              uiTransform={{
+                width: '100%',
+                flexDirection: 'column',
+                padding: { left: 16, right: 16, top: 14, bottom: 14 },
+                margin: { bottom: 18 }
+              }}
+              uiBackground={{ color: C.panelBg }}
+            >
+              <UiEntity uiTransform={{ flexDirection: 'row', alignItems: 'center', margin: { bottom: 10 } }}>
+                <Icon src='assets/icons/users.png' size={18} color={C.cyan} margin={{ right: 8 }} />
+                <Label
+                  value={
+                    gameState.outgoingInviteTo
+                      ? `INVITE SENT: WAITING FOR ${gameState.outgoingInviteTo.name.toUpperCase()}...`
+                      : 'AVAILABLE CLIMBERS IN SCENE'
+                  }
+                  fontSize={13}
+                  color={gameState.outgoingInviteTo ? C.gold : C.cyan}
+                  font='sans-serif'
+                />
+              </UiEntity>
+
+              {availablePlayers.length === 0 ? (
+                <Label
+                  value='No other players nearby. Waiting for climbers to enter scene...'
+                  fontSize={14}
+                  color={C.textMuted}
+                  font='sans-serif'
+                  uiTransform={{ margin: { top: 6, bottom: 6 } }}
+                />
+              ) : (
+                availablePlayers.slice(0, 3).map((p) => {
+                  const invited = gameState.outgoingInviteTo?.id === p.id
+                  return (
+                    <UiEntity
+                      key={`p-${p.id}`}
+                      uiTransform={{
+                        width: '100%',
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: { top: 6, bottom: 6 }
+                      }}
+                    >
+                      <UiEntity uiTransform={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <Icon src='assets/icons/user.png' size={18} color={C.textDim} margin={{ right: 10 }} />
+                        <Label value={p.displayName} fontSize={16} color={C.textWhite} font='sans-serif' />
+                      </UiEntity>
+                      <Button
+                        value={invited ? 'INVITED...' : 'LINK TETHER'}
+                        variant='primary'
+                        uiTransform={{ width: 130, height: 40 }}
+                        uiBackground={{ color: invited ? C.cyanDim : C.cyan }}
+                        fontSize={13}
+                        color={invited ? C.textMuted : C.insetBg}
+                        onMouseDown={() => requestTether(p.id)}
+                      />
+                    </UiEntity>
+                  )
+                })
+              )}
+            </UiEntity>
+          )}
+
+          {/* Tether Skin Selector */}
+          <UiEntity uiTransform={{ flexDirection: 'row', alignItems: 'center', margin: { bottom: 8 } }}>
+            <Icon src='assets/icons/palette.png' size={18} color={C.textMuted} margin={{ right: 8 }} />
+            <Label value='TETHER MATERIAL' fontSize={13} color={C.textMuted} font='sans-serif' />
+          </UiEntity>
+
+          <UiEntity
+            uiTransform={{
+              width: '100%',
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              margin: { bottom: 16 }
+            }}
+          >
+            {[
+              { icon: 'assets/icons/link.png',     label: 'IRON CHAIN', idx: 0 },
+              { icon: 'assets/icons/rope.png',     label: 'ROPE FIBER', idx: 1 },
+              { icon: 'assets/icons/sparkles.png', label: 'NEON BEAM',  idx: 2 }
+            ].map((s) => (
+              <UiEntity
+                key={`skin-${s.idx}`}
+                uiTransform={{
+                  width: 180,
+                  height: 48,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: { left: 10, right: 10 }
+                }}
+                uiBackground={{ color: uiState.selectedSkin === s.idx ? C.cyan : C.cyanDim }}
+                onMouseDown={() => {
+                  uiState.selectedSkin = s.idx
+                  gameState.tetherSkinIndex = s.idx
+                  setChainSkin(s.idx)
+                }}
+              >
+                <Icon
+                  src={s.icon}
+                  size={18}
+                  color={uiState.selectedSkin === s.idx ? C.insetBg : C.textWhite}
+                  margin={{ right: 8 }}
+                />
+                <Label
+                  value={s.label}
+                  fontSize={14}
+                  color={uiState.selectedSkin === s.idx ? C.insetBg : C.textWhite}
+                  font='sans-serif'
+                />
+              </UiEntity>
+            ))}
+          </UiEntity>
+
+          {/* Rules & Gameplay Quick-Tip */}
+          <UiEntity
+            uiTransform={{
+              width: '100%',
+              flexDirection: 'row',
+              alignItems: 'center',
+              padding: { left: 14, right: 14, top: 8, bottom: 8 },
+              margin: { bottom: 16 }
+            }}
+            uiBackground={{ color: C.subPanel }}
+          >
+            <Icon src='assets/icons/info.png' size={18} color={C.gold} margin={{ right: 8 }} />
+            <Label
+              value='Max chain reach is 4.0m. Coordinate jumps to prevent yanks & avoid rising lava!'
+              fontSize={13}
+              color={C.textDim}
+              font='sans-serif'
             />
           </UiEntity>
-        ) : (
-          /* Player Selection List */
+
+          {/* Action Row: Leaderboard Button & Start Button */}
           <UiEntity
             uiTransform={{
               width: '100%',
               flexDirection: 'column',
-              padding: { left: 12, right: 12, top: 8, bottom: 8 },
-              margin: { bottom: 14 }
+              margin: { bottom: 4 }
             }}
-            uiBackground={{ color: THEME.statBoxBg }}
           >
-            <Label
-              value={gameState.outgoingInviteTo
-                ? `INVITE SENT: WAITING FOR ${gameState.outgoingInviteTo.name.toUpperCase()} TO ACCEPT...`
-                : 'SELECT PARTNER IN SCENE'}
-              fontSize={11}
-              color={gameState.outgoingInviteTo ? THEME.gold : THEME.cyan}
-              uiTransform={{ margin: { bottom: 6 } }}
-            />
-
-            {availablePlayers.length === 0 ? (
-              <Label
-                value='Waiting for another player to enter the scene...'
-                fontSize={12}
-                color={THEME.textMuted}
-                uiTransform={{ margin: { top: 4, bottom: 4 } }}
-              />
-            ) : (
-              availablePlayers.slice(0, 3).map((player) => {
-                const isInvited = gameState.outgoingInviteTo?.id === player.id
-                return (
-                  <UiEntity
-                    key={`p-${player.id}`}
-                    uiTransform={{
-                      width: '100%',
-                      flexDirection: 'row',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      padding: { top: 4, bottom: 4 }
-                    }}
-                  >
-                    <Label value={`👤 ${player.displayName}`} fontSize={13} color={THEME.textPrimary} />
-                    <Button
-                      value={isInvited ? 'INVITED...' : 'LINK TETHER'}
-                      variant='primary'
-                      uiTransform={{ width: 120, height: 34 }}
-                      uiBackground={{ color: isInvited ? THEME.cyanDim : THEME.cyan }}
-                      fontSize={11}
-                      color={isInvited ? THEME.textMuted : THEME.cardBg}
-                      onMouseDown={() => requestTether(player.id)}
-                    />
-                  </UiEntity>
-                )
-              })
-            )}
-          </UiEntity>
-        )}
-
-        {/* Skin Selector */}
-        <Label value='TETHER MATERIAL' fontSize={11} color={THEME.textMuted} uiTransform={{ margin: { bottom: 6 } }} />
-        <UiEntity uiTransform={{ width: '100%', flexDirection: 'row', justifyContent: 'space-between', margin: { bottom: 16 } }}>
-          {[
-            { label: 'CHAIN', idx: 0 },
-            { label: 'ROPE', idx: 1 },
-            { label: 'NEON', idx: 2 }
-          ].map((item) => (
-            <Button
-              key={`skin-${item.idx}`}
-              value={item.label}
-              variant='primary'
-              uiTransform={{ width: 130, height: 42 }}
-              uiBackground={{ color: uiState.selectedSkin === item.idx ? THEME.cyan : THEME.cyanDim }}
-              fontSize={12}
-              color={THEME.textPrimary}
+            {/* Leaderboard Button */}
+            <UiEntity
+              uiTransform={{
+                width: '100%',
+                height: 48,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: { bottom: 12 }
+              }}
+              uiBackground={{ color: C.panelBg }}
               onMouseDown={() => {
-                uiState.selectedSkin = item.idx
-                gameState.tetherSkinIndex = item.idx
-                setChainSkin(item.idx)
+                uiState.showLeaderboardModal = true
+              }}
+            >
+              <Icon src='assets/icons/crown.png' size={20} color={C.gold} margin={{ right: 10 }} />
+              <Label value='VIEW SQUAD LEADERBOARD' fontSize={15} color={C.gold} font='sans-serif' />
+            </UiEntity>
+
+            {/* Primary Action Button */}
+            <Button
+              value={
+                isPaired
+                  ? 'START SQUAD CLIMB'
+                  : gameState.outgoingInviteTo
+                    ? 'WAITING FOR PARTNER TO ACCEPT...'
+                    : 'LINK WITH A PARTNER TO CLIMB'
+              }
+              variant='primary'
+              uiTransform={{ width: '100%', height: 58 }}
+              uiBackground={{ color: isPaired ? C.emerald : Color4.create(0.16, 0.20, 0.30, 0.6) }}
+              fontSize={18}
+              color={isPaired ? C.insetBg : C.textMuted}
+              onMouseDown={() => {
+                if (isPaired) startRun()
               }}
             />
-          ))}
+          </UiEntity>
         </UiEntity>
-
-        {/* Start Action */}
-        <Button
-          value={
-            isPaired
-              ? 'START SQUAD CLIMB ▶'
-              : gameState.outgoingInviteTo
-                ? '(WAITING FOR PARTNER TO ACCEPT...)'
-                : '(LINK A PARTNER TO START)'
-          }
-          variant='primary'
-          uiTransform={{ width: '100%', height: 48 }}
-          uiBackground={{ color: isPaired ? THEME.emerald : Color4.create(0.18, 0.22, 0.32, 0.6) }}
-          fontSize={14}
-          color={isPaired ? THEME.cardBg : THEME.textMuted}
-          onMouseDown={() => {
-            if (isPaired) startRun()
-          }}
-        />
       </UiEntity>
     </UiEntity>
   )
 }
 
-/** 2. Countdown Screen */
+// ─── 2. COUNTDOWN SCREEN ──────────────────────────────────────────────────────
 const CountdownScreen = () => (
   <UiEntity
     uiTransform={{
@@ -297,24 +590,58 @@ const CountdownScreen = () => (
       justifyContent: 'center'
     }}
   >
-    <Label
-      value={uiState.countdown > 0 ? `${uiState.countdown}` : 'CLIMB!'}
-      fontSize={uiState.countdown > 0 ? 84 : 64}
-      color={uiState.countdown > 0 ? THEME.gold : THEME.emerald}
-    />
-    <Label
-      value='LAVA IS RISING — MOVE TOGETHER'
-      fontSize={15}
-      color={THEME.orange}
-      uiTransform={{ margin: { top: 6 } }}
-    />
+    <UiEntity
+      uiTransform={{
+        flexDirection: 'column',
+        alignItems: 'center',
+        padding: { left: 70, right: 70, top: 36, bottom: 36 }
+      }}
+      uiBackground={{ color: C.cardBg }}
+    >
+      <Label value='GET READY TO CLIMB' fontSize={18} color={C.textMuted} font='sans-serif' uiTransform={{ margin: { bottom: 6 } }} />
+      <Label
+        value={uiState.countdown > 0 ? `${uiState.countdown}` : 'CLIMB!'}
+        fontSize={uiState.countdown > 0 ? 120 : 72}
+        color={uiState.countdown > 0 ? C.gold : C.emerald}
+        font='sans-serif'
+      />
+      <UiEntity uiTransform={{ flexDirection: 'row', alignItems: 'center', margin: { top: 12 } }}>
+        <Icon src='assets/icons/flame.png' size={22} color={C.orange} margin={{ right: 8 }} />
+        <Label
+          value='LAVA IS RISING — STAY CHAINED & ASCEND!'
+          fontSize={16}
+          color={C.orange}
+          font='sans-serif'
+        />
+      </UiEntity>
+      {gameState.partnerName !== '' && (
+        <UiEntity uiTransform={{ flexDirection: 'row', alignItems: 'center', margin: { top: 8 } }}>
+          <Icon src='assets/icons/link.png' size={18} color={C.textDim} margin={{ right: 8 }} />
+          <Label
+            value={`${gameState.localName} & ${gameState.partnerName}`}
+            fontSize={15}
+            color={C.textDim}
+            font='sans-serif'
+          />
+        </UiEntity>
+      )}
+    </UiEntity>
   </UiEntity>
 )
 
-/** 3. Active In-Game Running HUD */
+// ─── 3. RUNNING HUD ───────────────────────────────────────────────────────────
 const RunningHud = () => {
   const lavaDist = Math.max(0, Math.round((gameState.currentAltitude + 2.0 - gameState.lavaHeight) * 10) / 10)
-  const lavaNear = lavaDist < 2.5
+  const lavaNear = lavaDist < 3.0
+  const tension = tetherState.tension
+
+  // Tension badge info
+  const tensionInfo =
+    tension === 'YANKED'
+      ? { icon: 'assets/icons/zap.png', label: 'TETHER YANKED', color: C.red, bg: C.redDark }
+      : tension === 'TAUT'
+        ? { icon: 'assets/icons/alert-triangle.png', label: 'TETHER TAUT', color: C.gold, bg: Color4.create(0.35, 0.25, 0.02, 0.95) }
+        : { icon: 'assets/icons/check.png', label: 'SLACK (OK)', color: C.emerald, bg: Color4.create(0.02, 0.20, 0.08, 0.85) }
 
   return (
     <UiEntity
@@ -324,68 +651,85 @@ const RunningHud = () => {
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'flex-start',
-        padding: { top: 12 }
+        padding: { top: 16 }
       }}
     >
-      {/* Top Modular Stats Strip */}
+      {/* Main Top Modular HUD Ribbon */}
+      <UiEntity
+        uiTransform={{
+          flexDirection: 'row',
+          alignItems: 'stretch',
+          padding: { left: 6, right: 6, top: 6, bottom: 6 }
+        }}
+        uiBackground={{ color: C.cardBg }}
+      >
+        <StatBox icon='assets/icons/trophy.png' label='TEAM SCORE' value={`${gameState.teamScore}`} color={C.gold} isMono={true} />
+        <VDivider />
+        <StatBox icon='assets/icons/mountain.png' label='ALTITUDE' value={`${gameState.currentAltitude} M`} color={C.cyan} isMono={true} />
+        <VDivider />
+        <StatBox icon='assets/icons/flame.png' label='LAVA GAP' value={`-${lavaDist} M`} color={lavaNear ? C.red : C.orange} isMono={true} />
+        <VDivider />
+        <StatBox icon='assets/icons/clock.png' label='TIME' value={uiState.elapsedFormatted} color={C.textWhite} isMono={true} />
+      </UiEntity>
+
+      {/* Tension Status Pill */}
       <UiEntity
         uiTransform={{
           flexDirection: 'row',
           alignItems: 'center',
-          padding: { left: 16, right: 16, top: 8, bottom: 8 }
+          padding: { left: 18, right: 18, top: 6, bottom: 6 },
+          margin: { top: 8 }
         }}
-        uiBackground={{ color: THEME.cardBg }}
+        uiBackground={{ color: tensionInfo.bg }}
       >
-        {/* Score Badge */}
-        <UiEntity uiTransform={{ flexDirection: 'column', alignItems: 'flex-start', margin: { right: 18 } }}>
-          <Label value='TEAM SCORE' fontSize={10} color={THEME.textMuted} />
-          <Label value={`${gameState.teamScore}`} fontSize={20} color={THEME.gold} />
-        </UiEntity>
-
-        {/* Altitude Badge */}
-        <UiEntity uiTransform={{ flexDirection: 'column', alignItems: 'flex-start', margin: { right: 18 } }}>
-          <Label value='ALTITUDE' fontSize={10} color={THEME.textMuted} />
-          <Label value={`${gameState.currentAltitude} M`} fontSize={20} color={THEME.cyan} />
-        </UiEntity>
-
-        {/* Lava Threat Badge */}
-        <UiEntity uiTransform={{ flexDirection: 'column', alignItems: 'flex-start', margin: { right: 18 } }}>
-          <Label value='LAVA LEVEL' fontSize={10} color={lavaNear ? THEME.red : THEME.textMuted} />
-          <Label value={`-${lavaDist} M`} fontSize={20} color={lavaNear ? THEME.red : THEME.orange} />
-        </UiEntity>
-
-        {/* Timer */}
-        <UiEntity uiTransform={{ flexDirection: 'column', alignItems: 'flex-start' }}>
-          <Label value='SURVIVAL TIME' fontSize={10} color={THEME.textMuted} />
-          <Label value={uiState.elapsedFormatted} fontSize={18} color={THEME.textPrimary} />
-        </UiEntity>
+        <Icon src={tensionInfo.icon} size={18} color={tensionInfo.color} margin={{ right: 8 }} />
+        <Label
+          value={`${tensionInfo.label}  [${tetherState.distanceToPartner.toFixed(1)}m / 4.0m]`}
+          fontSize={15}
+          color={tensionInfo.color}
+          font='sans-serif'
+        />
       </UiEntity>
 
-      {/* Action Alerts */}
+      {/* Yank Danger Flash Banner */}
       {uiState.yankFlash && (
         <UiEntity
-          uiTransform={{ padding: { left: 14, right: 14, top: 4, bottom: 4 }, margin: { top: 8 } }}
-          uiBackground={{ color: THEME.red }}
+          uiTransform={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            padding: { left: 20, right: 20, top: 8, bottom: 8 },
+            margin: { top: 8 }
+          }}
+          uiBackground={{ color: C.redDark }}
         >
-          <Label value='TETHER TENSION CRITICAL // YANKED' fontSize={14} color={THEME.textPrimary} />
+          <Icon src='assets/icons/zap.png' size={20} color={C.textWhite} margin={{ right: 8 }} />
+          <Label value='TETHER SNAP! PARTNER WAS YANKED' fontSize={16} color={C.textWhite} font='sans-serif' />
         </UiEntity>
       )}
 
+      {/* Lava Warning Banner */}
       {lavaNear && (
         <UiEntity
-          uiTransform={{ padding: { left: 14, right: 14, top: 4, bottom: 4 }, margin: { top: 6 } }}
-          uiBackground={{ color: THEME.cardBg }}
+          uiTransform={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            padding: { left: 20, right: 20, top: 8, bottom: 8 },
+            margin: { top: 8 }
+          }}
+          uiBackground={{ color: Color4.create(0.40, 0.06, 0.02, 0.96) }}
         >
-          <Label value='WARNING: LAVA IMMINENT // ASCEND NOW' fontSize={13} color={THEME.red} />
+          <Icon src='assets/icons/flame.png' size={20} color={C.orange} margin={{ right: 8 }} />
+          <Label value='DANGER: LAVA CRITICAL // CLIMB HIGHER NOW!' fontSize={16} color={C.orange} font='sans-serif' />
         </UiEntity>
       )}
     </UiEntity>
   )
 }
 
-/** 4. Game Over / Team Eliminated Screen */
+// ─── 4. GAME OVER & RESULTS SCREEN ────────────────────────────────────────────
 const GameOverScreen = () => {
   const tier = getTierInfo(gameState.finalAltitude)
+  const isFinished = uiState.phase === 'FINISHED'
 
   return (
     <UiEntity
@@ -394,141 +738,197 @@ const GameOverScreen = () => {
         height: '100%',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: 16
+        padding: 20
       }}
     >
       <UiEntity
         uiTransform={{
-          width: 480,
+          width: 620,
           flexDirection: 'column',
-          alignItems: 'center',
-          padding: 22
+          alignItems: 'center'
         }}
-        uiBackground={{ color: THEME.cardBg }}
+        uiBackground={{ color: C.cardBg }}
       >
-        {/* Header Tag */}
-        <Label
-          value='TEAM ELIMINATED'
-          fontSize={24}
-          color={THEME.red}
-          uiTransform={{ margin: { bottom: 2 } }}
-        />
-        <Label
-          value={gameState.gameOverReason || 'Plunged into the molten abyss'}
-          fontSize={13}
-          color={THEME.textMuted}
-          uiTransform={{ margin: { bottom: 14 } }}
-        />
-
-        {/* 2-Column Stat Grid */}
-        <UiEntity uiTransform={{ width: '100%', flexDirection: 'row', justifyContent: 'space-between', margin: { bottom: 12 } }}>
-          {/* Stat 1: Final Score */}
-          <UiEntity
-            uiTransform={{
-              width: '48%',
-              flexDirection: 'column',
-              alignItems: 'center',
-              padding: { top: 10, bottom: 10 }
-            }}
-            uiBackground={{ color: THEME.statBoxBg }}
-          >
-            <Label value='FINAL TEAM SCORE' fontSize={11} color={THEME.textMuted} />
-            <Label value={`${gameState.finalScore} PTS`} fontSize={22} color={THEME.gold} />
-          </UiEntity>
-
-          {/* Stat 2: Peak Altitude */}
-          <UiEntity
-            uiTransform={{
-              width: '48%',
-              flexDirection: 'column',
-              alignItems: 'center',
-              padding: { top: 10, bottom: 10 }
-            }}
-            uiBackground={{ color: THEME.statBoxBg }}
-          >
-            <Label value='MAX ALTITUDE' fontSize={11} color={THEME.textMuted} />
-            <Label value={`${gameState.finalAltitude} M`} fontSize={22} color={THEME.cyan} />
-          </UiEntity>
-        </UiEntity>
-
-        {/* Milestone Tier Badge */}
-        <UiEntity
-          uiTransform={{
-            width: '100%',
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            padding: { left: 14, right: 14, top: 8, bottom: 8 },
-            margin: { bottom: 14 }
-          }}
-          uiBackground={{ color: THEME.statBoxBg }}
-        >
-          <Label value={tier.title} fontSize={13} color={tier.color} />
-          <Label value={tier.badge} fontSize={12} color={THEME.textMuted} />
-        </UiEntity>
-
-        {/* Global Leaderboard Table */}
+        {/* Header */}
         <UiEntity
           uiTransform={{
             width: '100%',
             flexDirection: 'column',
-            padding: { left: 12, right: 12, top: 8, bottom: 8 },
-            margin: { bottom: 16 }
+            alignItems: 'center',
+            padding: { top: 24, bottom: 18, left: 20, right: 20 }
           }}
-          uiBackground={{ color: THEME.statBoxBg }}
+          uiBackground={{ color: isFinished ? Color4.create(0.04, 0.22, 0.12, 1.0) : C.redDark }}
         >
+          <UiEntity uiTransform={{ flexDirection: 'row', alignItems: 'center', margin: { bottom: 4 } }}>
+            <Icon
+              src={isFinished ? 'assets/icons/trophy.png' : 'assets/icons/skull.png'}
+              size={32}
+              color={C.textWhite}
+              margin={{ right: 10 }}
+            />
+            <Label
+              value={isFinished ? 'CLIMB COMPLETED' : 'TEAM ELIMINATED'}
+              fontSize={32}
+              color={isFinished ? C.emerald : C.red}
+              font='sans-serif'
+            />
+          </UiEntity>
           <Label
-            value='GLOBAL SQUAD LEADERBOARD'
-            fontSize={11}
-            color={THEME.cyan}
-            uiTransform={{ margin: { bottom: 6 } }}
+            value={gameState.gameOverReason || 'Fell into the molten abyss'}
+            fontSize={15}
+            color={C.textDim}
+            font='sans-serif'
           />
-
-          {uiState.leaderboard.length === 0 ? (
-            <Label value='No squad records yet' fontSize={12} color={THEME.textMuted} />
-          ) : (
-            uiState.leaderboard.slice(0, 4).map((entry, i) => (
-              <UiEntity
-                key={`lb-${i}`}
-                uiTransform={{
-                  width: '100%',
-                  flexDirection: 'row',
-                  justifyContent: 'space-between',
-                  padding: { top: 4, bottom: 4 }
-                }}
-                uiBackground={{ color: i % 2 === 1 ? THEME.rowAltBg : THEME.transparent }}
-              >
-                <Label
-                  value={`${i + 1}. ${entry.displayName}`}
-                  fontSize={12}
-                  color={i === 0 ? THEME.gold : THEME.textPrimary}
-                />
-                <Label
-                  value={`${entry.teamScore} PTS  (${entry.maxAltitude}M)`}
-                  fontSize={12}
-                  color={i === 0 ? THEME.gold : THEME.textSecondary}
-                />
-              </UiEntity>
-            ))
-          )}
         </UiEntity>
 
-        {/* Action Button */}
-        <Button
-          value='RETRY CLIMB ▶'
-          variant='primary'
-          uiTransform={{ width: '100%', height: 50 }}
-          uiBackground={{ color: THEME.cyan }}
-          fontSize={15}
-          color={THEME.cardBg}
-          onMouseDown={resetToLobby}
-        />
+        {/* Content Box */}
+        <UiEntity
+          uiTransform={{
+            width: '100%',
+            flexDirection: 'column',
+            padding: { left: 24, right: 24, top: 20, bottom: 24 }
+          }}
+        >
+          {/* Stats 2x2 Grid */}
+          <UiEntity
+            uiTransform={{
+              width: '100%',
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              margin: { bottom: 16 }
+            }}
+          >
+            {/* Stat: Score */}
+            <UiEntity
+              uiTransform={{
+                width: '48%',
+                flexDirection: 'column',
+                alignItems: 'center',
+                padding: { top: 16, bottom: 16 }
+              }}
+              uiBackground={{ color: C.panelBg }}
+            >
+              <Icon src='assets/icons/trophy.png' size={32} color={C.gold} margin={{ bottom: 6 }} />
+              <Label value='FINAL SQUAD SCORE' fontSize={13} color={C.textMuted} font='sans-serif' />
+              <Label value={`${gameState.finalScore} PTS`} fontSize={28} color={C.gold} font='monospace' />
+            </UiEntity>
+
+            {/* Stat: Max Altitude */}
+            <UiEntity
+              uiTransform={{
+                width: '48%',
+                flexDirection: 'column',
+                alignItems: 'center',
+                padding: { top: 16, bottom: 16 }
+              }}
+              uiBackground={{ color: C.panelBg }}
+            >
+              <Icon src='assets/icons/mountain.png' size={32} color={C.cyan} margin={{ bottom: 6 }} />
+              <Label value='MAX ALTITUDE REACHED' fontSize={13} color={C.textMuted} font='sans-serif' />
+              <Label value={`${gameState.finalAltitude} M`} fontSize={28} color={C.cyan} font='monospace' />
+            </UiEntity>
+          </UiEntity>
+
+          {/* Tier Rank Banner */}
+          <UiEntity
+            uiTransform={{
+              width: '100%',
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: { left: 18, right: 18, top: 12, bottom: 12 },
+              margin: { bottom: 16 }
+            }}
+            uiBackground={{ color: C.panelBg }}
+          >
+            <UiEntity uiTransform={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Icon src={tier.icon} size={26} color={tier.color} margin={{ right: 10 }} />
+              <Label value={tier.title} fontSize={16} color={tier.color} font='sans-serif' />
+            </UiEntity>
+            <UiEntity
+              uiTransform={{ padding: { left: 12, right: 12, top: 6, bottom: 6 } }}
+              uiBackground={{ color: C.insetBg }}
+            >
+              <Label value={tier.badge} fontSize={13} color={C.textMuted} font='sans-serif' />
+            </UiEntity>
+          </UiEntity>
+
+          {/* Global Leaderboard */}
+          <UiEntity
+            uiTransform={{
+              width: '100%',
+              flexDirection: 'column',
+              padding: { left: 16, right: 16, top: 12, bottom: 12 },
+              margin: { bottom: 20 }
+            }}
+            uiBackground={{ color: C.panelBg }}
+          >
+            <UiEntity uiTransform={{ flexDirection: 'row', alignItems: 'center', margin: { bottom: 10 } }}>
+              <Icon src='assets/icons/crown.png' size={18} color={C.gold} margin={{ right: 8 }} />
+              <Label value='TOP SQUAD CLIMBERS' fontSize={14} color={C.cyan} font='sans-serif' />
+            </UiEntity>
+
+            {uiState.leaderboard.length === 0 ? (
+              <Label value='No squad records yet. Set the first record!' fontSize={14} color={C.textMuted} font='sans-serif' />
+            ) : (
+              uiState.leaderboard.slice(0, 4).map((entry, i) => {
+                const entryColor = i === 0 ? C.gold : C.textWhite
+                const medalIcon =
+                  i === 0
+                    ? 'assets/icons/crown.png'
+                    : i === 1 || i === 2
+                      ? 'assets/icons/medal.png'
+                      : 'assets/icons/user.png'
+                return (
+                  <UiEntity
+                    key={`lb-${i}`}
+                    uiTransform={{
+                      width: '100%',
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: { top: 6, bottom: 6, left: 6, right: 6 }
+                    }}
+                    uiBackground={{ color: i % 2 === 1 ? Color4.create(0.08, 0.12, 0.22, 0.45) : C.transparent }}
+                  >
+                    <UiEntity uiTransform={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <Icon src={medalIcon} size={16} color={entryColor} margin={{ right: 8 }} />
+                      <Label value={entry.displayName} fontSize={15} color={entryColor} font='sans-serif' />
+                    </UiEntity>
+                    <Label
+                      value={`${entry.teamScore} PTS (${entry.maxAltitude}M)`}
+                      fontSize={15}
+                      color={i === 0 ? C.gold : C.textDim}
+                      font='monospace'
+                    />
+                  </UiEntity>
+                )
+              })
+            )}
+          </UiEntity>
+
+          {/* Retry Climb Button */}
+          <UiEntity
+            uiTransform={{
+              width: '100%',
+              height: 58,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+            uiBackground={{ color: C.cyan }}
+            onMouseDown={resetToLobby}
+          >
+            <Icon src='assets/icons/refresh-cw.png' size={20} color={C.insetBg} margin={{ right: 10 }} />
+            <Label value='RETRY SQUAD CLIMB' fontSize={18} color={C.insetBg} font='sans-serif' />
+          </UiEntity>
+        </UiEntity>
       </UiEntity>
     </UiEntity>
   )
 }
 
-// ─── Root Container ───────────────────────────────────────────────────────────
+// ─── Root UI Container ────────────────────────────────────────────────────────
 const ChainmatesUI = () => (
   <UiEntity
     uiTransform={{
@@ -538,13 +938,13 @@ const ChainmatesUI = () => (
       alignItems: 'center',
       justifyContent: 'center'
     }}
-    uiBackground={{ color: THEME.transparent }}
+    uiBackground={{ color: C.transparent }}
   >
-    {uiState.phase === 'LOBBY' && <LobbyScreen />}
-    {uiState.phase === 'COUNTDOWN' && <CountdownScreen />}
-    {uiState.phase === 'RUNNING' && <RunningHud />}
-    {uiState.phase === 'GAME_OVER' && <GameOverScreen />}
-    {uiState.phase === 'FINISHED' && <GameOverScreen />}
+    {uiState.showLeaderboardModal && <LeaderboardModal />}
+    {!uiState.showLeaderboardModal && uiState.phase === 'LOBBY' && <LobbyScreen />}
+    {!uiState.showLeaderboardModal && uiState.phase === 'COUNTDOWN' && <CountdownScreen />}
+    {!uiState.showLeaderboardModal && uiState.phase === 'RUNNING' && <RunningHud />}
+    {!uiState.showLeaderboardModal && (uiState.phase === 'GAME_OVER' || uiState.phase === 'FINISHED') && <GameOverScreen />}
   </UiEntity>
 )
 

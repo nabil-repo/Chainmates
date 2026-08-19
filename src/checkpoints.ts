@@ -17,9 +17,10 @@ export function checkpointSystem(_dt: number) {
 
   const { y } = localTransform.position
 
-  // 2. Rising Lava & Void Fall Detection
-  // If player touches the rising lava or falls below it, the team loses!
-  if (y <= gameState.lavaHeight + 0.4 || y < 1.0) {
+  // Rising Lava & Ground Fall Detection.
+  // Launchpad spawn = y 2.6, grass ground = y ~1.0.
+  // Threshold 1.8 catches any fall to ground without firing at the launchpad.
+  if (y <= gameState.lavaHeight + 0.4 || y < 1.8) {
     triggerGameOver()
 
     // Teleport back to start haven platform
