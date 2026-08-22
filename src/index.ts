@@ -46,7 +46,12 @@ import {
   tickUi,
   updateUiEach
 } from './ui'
-import { fetchPersistentLeaderboard, pushPersistentLeaderboard } from './serverLeaderboard'
+import {
+  warmupServer,
+  fetchPersistentLeaderboard,
+  pushPersistentLeaderboard,
+  serverHeartbeatSystem
+} from './serverLeaderboard'
 import { startBgMusic } from './audio'
 
 // ─── Yank flash timer & UI throttle ──────────────────────────────────────────
@@ -99,11 +104,11 @@ export function main() {
   setupUi()
   updateControlsForPhase('LOBBY')
 
-  // 4. Load persistent leaderboard & start cyberpunk background music
-  fetchPersistentLeaderboard()
+  // 4. Warm up Render server & load persistent leaderboard & start music
+  warmupServer()
   startBgMusic()
 
-  // 4. Register all systems
+  // 5. Register all systems
   //    Priority: lower number = runs earlier
   engine.addSystem(playerSyncSystem, 10, 'PlayerSyncSystem')
   engine.addSystem(practiceBotSystem, 15, 'PracticeBotSystem')
@@ -116,6 +121,7 @@ export function main() {
   engine.addSystem(movingPlatformSystem, 45, 'MovingPlatformSystem')
   engine.addSystem(fogAnimationSystem, 48, 'FogAnimationSystem')
   engine.addSystem(hudSystem, 50, 'HudSystem')
+  engine.addSystem(serverHeartbeatSystem, 55, 'ServerHeartbeatSystem')
   engine.addSystem(mainUpdateSystem, 60, 'MainUpdateSystem')
 }
 
