@@ -15,15 +15,10 @@ import { executeTask } from '@dcl/sdk/ecs'
 import { gameState, LeaderboardEntry } from './gameState'
 
 // ─── Render Server Config ─────────────────────────────────────────────────────
-export const RENDER_SERVER_URL = 'https://chainmates-leaderboard.onrender.com'
+export const RENDER_SERVER_URL = 'https://chainmates.onrender.com'
 
-// ─── Default Local Cache (Used when server is offline or waking up) ────────────
-const LOCAL_FALLBACK_CACHE: LeaderboardEntry[] = [
-  { displayName: 'Neon & Cyber', partnerName: 'Cyber', playerId: '', teamScore: 3200, maxAltitude: 82, formattedTime: '2:15.40' },
-  { displayName: 'Spark & Nova', partnerName: 'Nova', playerId: '', teamScore: 2450, maxAltitude: 64, formattedTime: '1:48.20' },
-  { displayName: 'Aether & Void', partnerName: 'Void', playerId: '', teamScore: 1800, maxAltitude: 48, formattedTime: '1:22.10' },
-  { displayName: 'Pulse & Orbit', partnerName: 'Orbit', playerId: '', teamScore: 1350, maxAltitude: 36, formattedTime: '0:58.60' }
-]
+// ─── Default Local Cache (Clean initial state for real players) ───────────────
+const LOCAL_FALLBACK_CACHE: LeaderboardEntry[] = []
 
 interface ServerLeaderboardItem {
   displayName: string

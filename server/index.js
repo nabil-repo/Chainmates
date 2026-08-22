@@ -69,14 +69,12 @@ if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true })
 }
 
-// Initial Co-op Squad Leaderboard State
+// Initial Co-op Squad Leaderboard State (Clean slate for real players)
 const INITIAL_DATA = {
-  squadLeaderboard: [
-    { displayName: 'Neon & Cyber', score: 3200, altitude: 82, timestamp: Date.now() - 3600000 },
-    { displayName: 'Spark & Nova', score: 2450, altitude: 64, timestamp: Date.now() - 7200000 },
-    { displayName: 'Aether & Void', score: 1800, altitude: 48, timestamp: Date.now() - 14400000 }
-  ]
+  squadLeaderboard: []
 }
+
+const MOCK_NAMES = ['Neon & Cyber', 'Spark & Nova', 'Aether & Void', 'Pulse & Orbit', 'CyberClimber', 'NeonRunner', 'ApexJumper']
 
 // Load or initialize persistent data
 function loadData() {
@@ -84,9 +82,10 @@ function loadData() {
     if (fs.existsSync(DB_FILE)) {
       const raw = fs.readFileSync(DB_FILE, 'utf-8')
       const parsed = JSON.parse(raw)
-      return {
-        squadLeaderboard: Array.isArray(parsed.squadLeaderboard) ? parsed.squadLeaderboard : []
-      }
+      const list = Array.isArray(parsed.squadLeaderboard) ? parsed.squadLeaderboard : []
+      const cleaned = list.filter(e => !MOCK_NAMES.includes(e.displayName))
+      saveData({ squadLeaderboard: cleaned })
+      return { squadLeaderboard: cleaned }
     }
   } catch (err) {
     console.error('[DB] Error reading database file, using fallback:', err)
