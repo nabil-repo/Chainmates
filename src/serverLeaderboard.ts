@@ -1,12 +1,12 @@
 /**
  * serverLeaderboard.ts
- * Authoritative Leaderboard Client for Chainmates
+ * Authoritative Leaderboard Client for Chainmates (Co-op Squad Rankings)
  * Powered by Authoritative REST Backend on Render (https://chainmates-leaderboard.onrender.com)
  *
  * Architecture:
- *  - On world startup -> fetchPersistentLeaderboard() loads Top 50 global Squad & Solo rankings
- *  - On game over     -> submitScoreToServer() validates & records the completed run
- *  - Offline Safety   -> Automatic fallback to in-memory state with zero gameplay lag
+ *  - On world startup -> fetchPersistentLeaderboard() loads Top 50 global Co-op Squad rankings
+ *  - On game over     -> pushPersistentLeaderboard() validates & records co-op squad runs
+ *  - Solo mode        -> Pure practice/training mode (no persistent leaderboard submission)
  */
 
 import { executeTask } from '@dcl/sdk/ecs'
@@ -29,7 +29,6 @@ interface ServerLeaderboardItem {
 interface ServerLeaderboardResponse {
   success: boolean
   squadLeaderboard?: ServerLeaderboardItem[]
-  soloLeaderboard?: ServerLeaderboardItem[]
 }
 
 function mapServerToClient(entries: ServerLeaderboardItem[]): LeaderboardEntry[] {
@@ -77,18 +76,11 @@ export function fetchPersistentLeaderboard() {
 
       const data = await res.json() as ServerLeaderboardResponse
 
-      if (data.success) {
-        if (data.squadLeaderboard && data.squadLeaderboard.length > 0) {
-          const mapped = mapServerToClient(data.squadLeaderboard)
-          mergeIntoBoard(gameState.leaderboard, mapped)
-        }
-        if (data.soloLeaderboard && data.soloLeaderboard.length > 0) {
-          const mapped = mapServerToClient(data.soloLeaderboard)
-          mergeIntoBoard(gameState.soloLeaderboard, mapped)
-        }
-
+      if (data.success && data.squadLeaderboard && data.squadLeaderboard.length > 0) {
+        const mapped = mapServerToClient(data.squadLeaderboard)
+        mergeIntoBoard(gameState.leaderboard, mapped)
         gameState.onLeaderboardUpdate?.(gameState.leaderboard)
-        console.log(`[Chainmates] Authoritative Leaderboard loaded (${gameState.leaderboard.length} squad, ${gameState.soloLeaderboard.length} solo) ✓`)
+        console.log(`[Chainmates] Authoritative Squad Leaderboard loaded (${gameState.leaderboard.length} entries) ✓`)
       }
     } catch (e) {
       console.log('[Chainmates] Authoritative server connecting in background...')
@@ -97,18 +89,22 @@ export function fetchPersistentLeaderboard() {
 }
 
 /**
- * Submit the completed run score to the authoritative Render server.
+ * Submit the completed co-op squad run score to the authoritative Render server.
+ * Solo practice runs are excluded from persistent server leaderboard.
  */
 export function pushPersistentLeaderboard() {
   executeTask(async () => {
     try {
       const isSolo = gameState.isPracticeMode || !gameState.partnerId || gameState.partnerId === '__SOLO__'
-      const teamName = isSolo
-        ? (gameState.localName || 'Solo Climber')
-        : `${gameState.localName || 'Player 1'} & ${gameState.partnerName || 'Player 2'}`
+      if (isSolo) {
+        // Solo runs are practice-only; do not write to persistent co-op leaderboard
+        return
+      }
+
+      const teamName = `${gameState.localName || 'Player 1'} & ${gameState.partnerName || 'Player 2'}`
 
       const payload = {
-        mode: isSolo ? 'SOLO' : 'SQUAD',
+        mode: 'SQUAD',
         teamName,
         score: gameState.teamScore,
         altitude: Math.round(gameState.maxAltitude),
@@ -127,11 +123,10 @@ export function pushPersistentLeaderboard() {
 
       if (res.ok) {
         const data = await res.json() as ServerLeaderboardResponse
-        if (data.success) {
-          if (data.squadLeaderboard) mergeIntoBoard(gameState.leaderboard, mapServerToClient(data.squadLeaderboard))
-          if (data.soloLeaderboard) mergeIntoBoard(gameState.soloLeaderboard, mapServerToClient(data.soloLeaderboard))
+        if (data.success && data.squadLeaderboard) {
+          mergeIntoBoard(gameState.leaderboard, mapServerToClient(data.squadLeaderboard))
           gameState.onLeaderboardUpdate?.(gameState.leaderboard)
-          console.log('[Chainmates] Score submitted to Authoritative Server ✓')
+          console.log('[Chainmates] Squad score submitted to Authoritative Server ✓')
         }
       }
     } catch (e) {

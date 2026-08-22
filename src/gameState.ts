@@ -93,11 +93,8 @@ export const gameState = {
   // Practice / Solo mode
   isPracticeMode: false,
 
-  // Leaderboard (co-op)
+  // Leaderboard (co-op squads)
   leaderboard: [] as LeaderboardEntry[],
-
-  // Solo practice leaderboard (session-only)
-  soloLeaderboard: [] as LeaderboardEntry[],
 
   // Countdown state
   countdownValue: 3,
@@ -540,9 +537,8 @@ export function triggerGameOver() {
   }).catch(() => { })
 
   if (wasPractice) {
-    // Solo run — clean up bot, add to solo leaderboard only, no broadcast
+    // Solo practice run — clean up bot, no leaderboard entry, no broadcast
     destroyPracticeBot()
-    addSoloToLeaderboard(gameState.localName, gameState.teamScore, gameState.maxAltitude, gameState.currentElapsedMs)
   } else {
     // Co-op run — add to team leaderboard and broadcast
     const partnerName = gameState.partnerName || 'Partner'
@@ -638,31 +634,6 @@ function addTeamToLeaderboard(player1: string, player2: string, teamScore: numbe
   // Sort descending by highest team score, keep top 10
   gameState.leaderboard.sort((a, b) => b.teamScore - a.teamScore)
   if (gameState.leaderboard.length > 10) gameState.leaderboard.length = 10
-  gameState.onLeaderboardUpdate?.(gameState.leaderboard)
-}
-
-function addSoloToLeaderboard(player: string, score: number, maxAltitude: number, timeMs: number) {
-  const label = `${player} (Solo)`
-  const existing = gameState.soloLeaderboard.findIndex(e => e.displayName === label)
-  const entry: LeaderboardEntry = {
-    displayName: label,
-    partnerName: '',
-    playerId: gameState.localId,
-    teamScore: score,
-    maxAltitude,
-    formattedTime: formatTime(timeMs)
-  }
-
-  if (existing >= 0) {
-    if (score > gameState.soloLeaderboard[existing].teamScore) {
-      gameState.soloLeaderboard[existing] = entry
-    }
-  } else {
-    gameState.soloLeaderboard.push(entry)
-  }
-
-  gameState.soloLeaderboard.sort((a, b) => b.teamScore - a.teamScore)
-  if (gameState.soloLeaderboard.length > 10) gameState.soloLeaderboard.length = 10
   gameState.onLeaderboardUpdate?.(gameState.leaderboard)
 }
 
