@@ -1,32 +1,32 @@
 /**
  * checkpoints.ts
- * Auto-Start and Molten Lava Hazard Detection for Endless Co-op Climb.
+ * Fall Hazard & Out-of-Bounds Detection for Chainmates.
  */
 
 import { engine, Transform } from '@dcl/sdk/ecs'
 import { movePlayerTo } from '~system/RestrictedActions'
-import { gameState, triggerGameOver, startRun } from './gameState'
+import { gameState, triggerGameOver } from './gameState'
 
-// ─── Per-frame Lava Hazard Detection ─────────────────────────────────────────
+/** Per-frame Hazard & Fall Protection System */
 export function checkpointSystem(_dt: number) {
-  // Only check hazards during active run
-  if (gameState.phase !== 'RUNNING') return
-
   const localTransform = Transform.getOrNull(engine.PlayerEntity)
   if (!localTransform) return
 
-  const { y } = localTransform.position
+  const { x, y, z } = localTransform.position
 
-  // Rising Lava & Ground Fall Detection.
-  // Launchpad spawn = y 2.6, grass ground = y ~1.0.
-  // Threshold 1.8 catches any fall to ground without firing at the launchpad.
-  if (y <= gameState.lavaHeight + 0.4 || y < 1.8) {
-    triggerGameOver()
+  // 1. Active Climb Run: Detect plunge into rising void or fall below safety threshold
+  if (gameState.phase === 'RUNNING' || gameState.phase === 'PRACTICE') {
+    if (y <= gameState.lavaHeight + 0.4 || y < 1.8) {
+      triggerGameOver()
+      return
+    }
+  }
 
-    // Teleport back to start haven platform
+  // 2. Global Safety Catch: If player falls off the lounge or wanders out of parcel
+  if (y < 0.5 || x < 0.5 || x > 15.5 || z < -0.5 || z > 16.5) {
     movePlayerTo({
-      newRelativePosition: { x: 8.0, y: 2.6, z: 2.0 },
-      cameraTarget: { x: 8.0, y: 5.0, z: 10.0 }
+      newRelativePosition: { x: 8.0, y: 1.6, z: 0.6 },
+      cameraTarget: { x: 8.0, y: 2.5, z: 6.0 }
     }).catch(() => { })
   }
 }

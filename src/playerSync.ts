@@ -38,6 +38,8 @@ function hasNativeRemoteAvatars(): boolean {
   return count > 0
 }
 
+let proxyCheckTimer = 0
+
 /** Called every frame. Handles broadcast timing and proxy lerping. */
 export function playerSyncSystem(dt: number) {
   // 1. Broadcast local position on interval
@@ -69,13 +71,20 @@ export function playerSyncSystem(dt: number) {
     )
   }
 
-  // 3. Ensure proxy entities exist for all known remote players
-  const nativeCommsActive = hasNativeRemoteAvatars()
+  // 3. Ensure proxy entities exist (checked at 2 FPS to avoid per-frame entity scans)
+  proxyCheckTimer += dt
+  if (proxyCheckTimer >= 0.5) {
+    proxyCheckTimer = 0
+    const nativeCommsActive = hasNativeRemoteAvatars()
 
-  for (const [id, remotePlayer] of gameState.remotePlayers) {
-    if (!proxyEntities.has(id)) {
-      const proxy = createProxy(id, remotePlayer.displayName, remotePlayer.x, remotePlayer.y, remotePlayer.z, !nativeCommsActive)
-      proxyEntities.set(id, proxy)
+    for (const [id, remotePlayer] of gameState.remotePlayers) {
+      // Skip internal practice bot (rendered by practiceBot.ts using Ball Droid GLB)
+      if (id === '__SOLO__') continue
+
+      if (!proxyEntities.has(id)) {
+        const proxy = createProxy(id, remotePlayer.displayName, remotePlayer.x, remotePlayer.y, remotePlayer.z, !nativeCommsActive)
+        proxyEntities.set(id, proxy)
+      }
     }
   }
 }

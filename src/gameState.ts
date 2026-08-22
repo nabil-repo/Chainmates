@@ -10,12 +10,14 @@
 
 import { MessageBus } from '@dcl/sdk/message-bus'
 import { EngineInfo, engine, Transform, InputModifier } from '@dcl/sdk/ecs'
-import { movePlayerTo } from '~system/RestrictedActions'
-import { resetPlatformPool } from './course'
+import { movePlayerTo, triggerEmote } from '~system/RestrictedActions'
+import { resetPlatformPool, resetLavaPosition } from './course'
+import { createPracticeBot, destroyPracticeBot } from './practiceBot'
+import { playTickSound, playGoSound, playVoidFallSound, playMilestoneSound } from './audio'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type GamePhase = 'LOBBY' | 'COUNTDOWN' | 'RUNNING' | 'FINISHED' | 'GAME_OVER'
+export type GamePhase = 'LOBBY' | 'COUNTDOWN' | 'RUNNING' | 'FINISHED' | 'GAME_OVER' | 'PRACTICE'
 
 export interface RemotePlayer {
   id: string
@@ -76,6 +78,7 @@ export const gameState = {
   lavaHeight: 0.05,       // current lava Y position (starts at ground)
   lavaBaseSpeed: 0.15,    // meters per second base rise speed
   lavaSpeed: 0.15,        // current lava rise speed (scales with altitude)
+  gemsCollected: 0,       // floating cyber-gems picked up this run
 
   // Connected players in scene
   remotePlayers: new Map<string, RemotePlayer>(),
@@ -87,8 +90,14 @@ export const gameState = {
   outgoingInviteTo: null as { id: string; name: string } | null,
   tetherSkinIndex: 0,     // 0=Chain 1=Rope 2=Neon
 
-  // Leaderboard
+  // Practice / Solo mode
+  isPracticeMode: false,
+
+  // Leaderboard (co-op)
   leaderboard: [] as LeaderboardEntry[],
+
+  // Solo practice leaderboard (session-only)
+  soloLeaderboard: [] as LeaderboardEntry[],
 
   // Countdown state
   countdownValue: 3,
@@ -106,6 +115,11 @@ export const gameState = {
   onSquadUpdate: null as (() => void) | null
 }
 
+// ─── Internal State Variables ─────────────────────────────────────────────────
+let lockedSpawnPos: { x: number; y: number; z: number } | null = null
+let countdownTimer = 0
+let lastAchievedMilestone = 0
+
 // ─── Helper: Get Current Squad Team ID ────────────────────────────────────────
 function getTeamId(): string {
   if (!gameState.partnerId) return gameState.localId
@@ -121,8 +135,6 @@ function getLaunchpadSlot(): { x: number; y: number; z: number } {
     z: 3.0
   }
 }
-
-let lockedSpawnPos: { x: number; y: number; z: number } | null = null
 
 // ─── MessageBus Listeners ─────────────────────────────────────────────────────
 
@@ -183,7 +195,7 @@ bus.on('cm:tether_leave', (data: TetherLeaveMsg) => {
  * Controls are disabled until the game starts (RUNNING phase).
  */
 export function updateControlsForPhase(phase: GamePhase) {
-  if (phase === 'RUNNING') {
+  if (phase === 'RUNNING' || phase === 'PRACTICE') {
     InputModifier.createOrReplace(engine.PlayerEntity, {
       mode: InputModifier.Mode.Standard({
         disableAll: false,
@@ -249,7 +261,7 @@ bus.on('cm:game_over', (data: GameOverMsg) => {
 
   gameState.phase = 'GAME_OVER'
   updateControlsForPhase('GAME_OVER')
-  gameState.gameOverReason = `${data.fallerName} fell into the molten lava!`
+  gameState.gameOverReason = `${data.fallerName} fell into the electric void!`
   gameState.finalScore = data.teamScore
   gameState.finalAltitude = data.maxAltitude
 
@@ -335,17 +347,17 @@ export function broadcastPosition(x: number, y: number, z: number) {
   } as PosMsg)
 }
 
-let countdownTimer = 0
-
-/** Explicit Start Button Click */
+/** Explicit Start Button Click (co-op — requires partner) */
 export function startRun() {
-  if (gameState.phase !== 'LOBBY') return
+  if (gameState.phase !== 'LOBBY' && gameState.phase !== 'GAME_OVER') return
   if (!gameState.partnerId) return // must have chosen and accepted partner!
 
+  gameState.isPracticeMode = false
   gameState.phase = 'COUNTDOWN'
   updateControlsForPhase('COUNTDOWN')
   gameState.countdownValue = 3
   countdownTimer = 0
+  resetClimbState()
   gameState.onPhaseChange?.('COUNTDOWN')
   gameState.onCountdownTick?.(3)
 
@@ -358,6 +370,36 @@ export function startRun() {
   // Teleport to active course launchpad slot
   const slot = getLaunchpadSlot()
   lockedSpawnPos = slot
+  movePlayerTo({
+    newRelativePosition: slot,
+    cameraTarget: { x: slot.x, y: 5.0, z: 10.0 }
+  }).catch(() => { })
+}
+
+/**
+ * Solo Practice Run — no partner required.
+ * Full lava + climb experience. Tether connected to Ball Droid.
+ * Scores go to solo leaderboard only.
+ */
+export function startPractice() {
+  if (gameState.phase !== 'LOBBY' && gameState.phase !== 'GAME_OVER') return
+
+  gameState.isPracticeMode = true
+  gameState.partnerId = '__SOLO__'
+  gameState.partnerName = 'Ball Droid'
+  gameState.phase = 'COUNTDOWN'
+  updateControlsForPhase('COUNTDOWN')
+  gameState.countdownValue = 3
+  countdownTimer = 0
+  resetClimbState()
+  gameState.onPhaseChange?.('COUNTDOWN')
+  gameState.onCountdownTick?.(3)
+
+  // Solo runs at center launchpad with Ball Droid
+  const slot = { x: 8.0, y: 2.6, z: 3.0 }
+  lockedSpawnPos = slot
+  createPracticeBot(slot.x, slot.y, slot.z)
+
   movePlayerTo({
     newRelativePosition: slot,
     cameraTarget: { x: slot.x, y: 5.0, z: 10.0 }
@@ -387,9 +429,13 @@ export function updateGameState(dt: number) {
     if (countdownTimer >= 1.0) {
       countdownTimer = 0
       gameState.countdownValue -= 1
+      if (gameState.countdownValue > 0) {
+        playTickSound()
+      }
       gameState.onCountdownTick?.(gameState.countdownValue)
 
       if (gameState.countdownValue <= 0) {
+        playGoSound()
         gameState.phase = 'RUNNING'
         updateControlsForPhase('RUNNING')
         lockedSpawnPos = null
@@ -406,8 +452,8 @@ export function updateGameState(dt: number) {
     }
   }
 
-  // Active Endless Run Loop
-  if (gameState.phase === 'RUNNING') {
+  // Active Endless Run Loop (co-op or solo practice)
+  if (gameState.phase === 'RUNNING' || gameState.phase === 'PRACTICE') {
     const engineInfo = EngineInfo.getOrNull(engine.RootEntity)
     if (engineInfo) {
       gameState.currentElapsedMs =
@@ -421,6 +467,25 @@ export function updateGameState(dt: number) {
       gameState.currentAltitude = alt
       if (alt > gameState.maxAltitude) {
         gameState.maxAltitude = alt
+
+        // Milestone achievements with celebration fanfare & avatar emote
+        if (alt >= 200 && lastAchievedMilestone < 200) {
+          lastAchievedMilestone = 200
+          playMilestoneSound()
+          triggerEmote({ predefinedEmote: 'dance' }).catch(() => { })
+        } else if (alt >= 100 && lastAchievedMilestone < 100) {
+          lastAchievedMilestone = 100
+          playMilestoneSound()
+          triggerEmote({ predefinedEmote: 'handsair' }).catch(() => { })
+        } else if (alt >= 50 && lastAchievedMilestone < 50) {
+          lastAchievedMilestone = 50
+          playMilestoneSound()
+          triggerEmote({ predefinedEmote: 'cheer' }).catch(() => { })
+        } else if (alt >= 25 && lastAchievedMilestone < 25) {
+          lastAchievedMilestone = 25
+          playMilestoneSound()
+          triggerEmote({ predefinedEmote: 'fistpump' }).catch(() => { })
+        }
       }
     }
 
@@ -428,7 +493,7 @@ export function updateGameState(dt: number) {
     gameState.lavaSpeed = gameState.lavaBaseSpeed + (gameState.maxAltitude / 100) * 0.08
     gameState.lavaHeight += dt * gameState.lavaSpeed
 
-    // Continuous Team Score
+    // Continuous Score
     const timeSec = Math.floor(gameState.currentElapsedMs / 1000)
     gameState.teamScore = Math.floor(gameState.maxAltitude * 100 + timeSec * 10)
     if (gameState.teamScore > gameState.highScore) {
@@ -453,10 +518,18 @@ export function updateGameState(dt: number) {
 
 /** Called when either player plunges into the rising lava */
 export function triggerGameOver() {
-  if (gameState.phase !== 'RUNNING') return
+  if (gameState.phase !== 'RUNNING' && gameState.phase !== 'PRACTICE') return
+  const wasPractice = gameState.isPracticeMode
+
+  playVoidFallSound()
+  resetLavaPosition()
+  gameState.lavaHeight = 0.05
+
   gameState.phase = 'GAME_OVER'
   updateControlsForPhase('GAME_OVER')
-  gameState.gameOverReason = `${gameState.localName} plunged into the molten lava!`
+  gameState.gameOverReason = wasPractice
+    ? `Solo run ended — the void took you!`
+    : `${gameState.localName} plunged into the electric void!`
   gameState.finalScore = gameState.teamScore
   gameState.finalAltitude = gameState.maxAltitude
 
@@ -466,24 +539,42 @@ export function triggerGameOver() {
     cameraTarget: { x: 8.0, y: 2.5, z: 6.0 }
   }).catch(() => { })
 
-  const partnerName = gameState.partnerName || 'Partner'
-  addTeamToLeaderboard(gameState.localName, partnerName, gameState.teamScore, gameState.maxAltitude, gameState.currentElapsedMs)
-
-  bus.emit('cm:game_over', {
-    fallerName: gameState.localName,
-    teamScore: gameState.teamScore,
-    maxAltitude: gameState.maxAltitude,
-    timeMs: gameState.currentElapsedMs,
-    teamId: getTeamId()
-  } as GameOverMsg)
+  if (wasPractice) {
+    // Solo run — clean up bot, add to solo leaderboard only, no broadcast
+    destroyPracticeBot()
+    addSoloToLeaderboard(gameState.localName, gameState.teamScore, gameState.maxAltitude, gameState.currentElapsedMs)
+  } else {
+    // Co-op run — add to team leaderboard and broadcast
+    const partnerName = gameState.partnerName || 'Partner'
+    addTeamToLeaderboard(gameState.localName, partnerName, gameState.teamScore, gameState.maxAltitude, gameState.currentElapsedMs)
+    bus.emit('cm:game_over', {
+      fallerName: gameState.localName,
+      teamScore: gameState.teamScore,
+      maxAltitude: gameState.maxAltitude,
+      timeMs: gameState.currentElapsedMs,
+      teamId: getTeamId()
+    } as GameOverMsg)
+  }
 
   gameState.onPhaseChange?.('GAME_OVER')
 }
 
 /** Reset back to lobby after a run or game over */
 export function resetToLobby() {
+  const wasPractice = gameState.isPracticeMode
+  if (wasPractice) {
+    destroyPracticeBot()
+  }
+  gameState.isPracticeMode = false
   gameState.phase = 'LOBBY'
   updateControlsForPhase('LOBBY')
+
+  // Clear solo partner sentinel
+  if (gameState.partnerId === '__SOLO__') {
+    gameState.partnerId = ''
+    gameState.partnerName = ''
+  }
+
   resetClimbState()
 
   // Teleport back to waiting lounge
@@ -492,11 +583,14 @@ export function resetToLobby() {
     cameraTarget: { x: 8.0, y: 2.5, z: 6.0 }
   }).catch(() => { })
 
-  bus.emit('cm:phase', {
-    phase: 'LOBBY',
-    startRuntime: 0,
-    teamId: getTeamId()
-  } as PhaseMsg)
+  // Only broadcast lobby phase for co-op runs
+  if (!wasPractice) {
+    bus.emit('cm:phase', {
+      phase: 'LOBBY',
+      startRuntime: 0,
+      teamId: getTeamId()
+    } as PhaseMsg)
+  }
 
   gameState.onPhaseChange?.('LOBBY')
 }
@@ -508,7 +602,10 @@ function resetClimbState() {
   gameState.maxAltitude = 0
   gameState.lavaHeight = 0.05
   gameState.lavaSpeed = gameState.lavaBaseSpeed
+  gameState.gemsCollected = 0
+  lastAchievedMilestone = 0
 
+  resetLavaPosition()
   // Reset procedural platforms back to original low positions
   resetPlatformPool()
 }
@@ -541,6 +638,31 @@ function addTeamToLeaderboard(player1: string, player2: string, teamScore: numbe
   // Sort descending by highest team score, keep top 10
   gameState.leaderboard.sort((a, b) => b.teamScore - a.teamScore)
   if (gameState.leaderboard.length > 10) gameState.leaderboard.length = 10
+  gameState.onLeaderboardUpdate?.(gameState.leaderboard)
+}
+
+function addSoloToLeaderboard(player: string, score: number, maxAltitude: number, timeMs: number) {
+  const label = `${player} (Solo)`
+  const existing = gameState.soloLeaderboard.findIndex(e => e.displayName === label)
+  const entry: LeaderboardEntry = {
+    displayName: label,
+    partnerName: '',
+    playerId: gameState.localId,
+    teamScore: score,
+    maxAltitude,
+    formattedTime: formatTime(timeMs)
+  }
+
+  if (existing >= 0) {
+    if (score > gameState.soloLeaderboard[existing].teamScore) {
+      gameState.soloLeaderboard[existing] = entry
+    }
+  } else {
+    gameState.soloLeaderboard.push(entry)
+  }
+
+  gameState.soloLeaderboard.sort((a, b) => b.teamScore - a.teamScore)
+  if (gameState.soloLeaderboard.length > 10) gameState.soloLeaderboard.length = 10
   gameState.onLeaderboardUpdate?.(gameState.leaderboard)
 }
 

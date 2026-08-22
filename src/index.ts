@@ -24,22 +24,35 @@ import {
 
 import { playerSyncSystem } from './playerSync'
 import { tetherSystem } from './tether'
+import { practiceBotSystem } from './practiceBot'
 import { checkpointSystem } from './checkpoints'
-import { movingPlatformSystem, endlessPlatformRecycleSystem, lavaSystem } from './systems'
+import {
+  endlessPlatformRecycleSystem,
+  lavaSystem,
+  movingPlatformSystem,
+  gemCollectionSystem,
+  hazardObstacleSystem,
+  fogAnimationSystem
+} from './systems'
 import { setupHud, hudSystem } from './hud'
 import { buildCourse } from './course'
+import { update3DLeaderboard } from './lobbyLeaderboard'
 import {
   setupUi,
   setUiPhase,
   setUiCountdown,
   setUiLeaderboard,
   setUiYankFlash,
+  tickUi,
   updateUiEach
 } from './ui'
+import { fetchPersistentLeaderboard, pushPersistentLeaderboard } from './serverLeaderboard'
+import { startBgMusic } from './audio'
 
-// ─── Yank flash timer ─────────────────────────────────────────────────────────
+// ─── Yank flash timer & UI throttle ──────────────────────────────────────────
 let yankFlashTimer = 0
 const YANK_FLASH_DURATION = 1.2  // seconds
+let uiThrottleTimer = 0
 
 export function main() {
   // 1. Wire UI callbacks into gameState
@@ -51,6 +64,9 @@ export function main() {
   }
   gameState.onLeaderboardUpdate = (board) => {
     setUiLeaderboard(board)
+    update3DLeaderboard(board)
+    // Persist every leaderboard update to JSONBin
+    pushPersistentLeaderboard()
   }
   gameState.onYankReceived = () => {
     yankFlashTimer = YANK_FLASH_DURATION
@@ -83,14 +99,22 @@ export function main() {
   setupUi()
   updateControlsForPhase('LOBBY')
 
+  // 4. Load persistent leaderboard & start cyberpunk background music
+  fetchPersistentLeaderboard()
+  startBgMusic()
+
   // 4. Register all systems
   //    Priority: lower number = runs earlier
   engine.addSystem(playerSyncSystem, 10, 'PlayerSyncSystem')
+  engine.addSystem(practiceBotSystem, 15, 'PracticeBotSystem')
   engine.addSystem(tetherSystem, 20, 'TetherSystem')
   engine.addSystem(checkpointSystem, 30, 'CheckpointSystem')
+  engine.addSystem(gemCollectionSystem, 32, 'GemCollectionSystem')
+  engine.addSystem(hazardObstacleSystem, 34, 'HazardObstacleSystem')
   engine.addSystem(endlessPlatformRecycleSystem, 35, 'EndlessRecycleSystem')
   engine.addSystem(lavaSystem, 40, 'LavaSystem')
   engine.addSystem(movingPlatformSystem, 45, 'MovingPlatformSystem')
+  engine.addSystem(fogAnimationSystem, 48, 'FogAnimationSystem')
   engine.addSystem(hudSystem, 50, 'HudSystem')
   engine.addSystem(mainUpdateSystem, 60, 'MainUpdateSystem')
 }
@@ -100,20 +124,15 @@ function mainUpdateSystem(dt: number) {
   // Tick game state (countdown timer, run timer, stale player cleanup)
   updateGameState(dt)
 
-  // Push current elapsed time to UI (only during run)
-  if (gameState.phase === 'RUNNING') {
-    updateUiEach(gameState.currentElapsedMs)
-  }
-
-  // Yank flash timer
-  if (yankFlashTimer > 0) {
-    yankFlashTimer -= dt
-    if (yankFlashTimer <= 0) {
-      setUiYankFlash(false)
+  // Push current elapsed time to UI at 10 FPS max (prevents 60fps React-ECS virtual DOM thrashing)
+  uiThrottleTimer += dt
+  if (uiThrottleTimer >= 0.1) {
+    uiThrottleTimer = 0
+    if (gameState.phase === 'RUNNING' || gameState.phase === 'PRACTICE') {
+      updateUiEach(gameState.currentElapsedMs)
     }
   }
 
-  // Update partner display name in UI state
-  // (gameState.remotePlayers is live — UI reads it directly)
-  // uiState.playerCount is updated by the reactive map access in UI
+  // Tick UI state (auto-dismiss alerts)
+  tickUi(dt)
 }

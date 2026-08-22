@@ -12,11 +12,16 @@ import {
   Material,
   TextShape,
   Billboard,
-  BillboardMode
+  BillboardMode,
+  TextureWrapMode,
+  TextureFilterMode,
+  VisibilityComponent,
+  MaterialTransparencyMode
 } from '@dcl/sdk/ecs'
-import { Vector3, Color4 } from '@dcl/sdk/math'
+import { Vector3, Color4, Quaternion } from '@dcl/sdk/math'
 import { MovingPlatform } from './components'
 import { gameState } from './gameState'
+import { build3DLeaderboard } from './lobbyLeaderboard'
 
 // ─── Color Palette ────────────────────────────────────────────────────────────
 export const COL_FLOATING_STONE = Color4.create(0.12, 0.14, 0.24, 1)
@@ -24,6 +29,22 @@ export const COL_NEON_CYAN = Color4.create(0.15, 0.85, 1.0, 1)
 export const COL_NEON_GOLD = Color4.create(1.0, 0.78, 0.15, 1)
 export const COL_NEON_MAGENTA = Color4.create(0.9, 0.25, 0.85, 1)
 export const COL_NEON_GREEN = Color4.create(0.15, 1.0, 0.55, 1)
+export const COL_NEON_PURPLE = Color4.create(0.75, 0.35, 1.0, 1)
+
+/** Dynamic Altitude Biome Color Function */
+export function getAltitudeBiomeColor(altitude: number): Color4 {
+  if (altitude < 30) {
+    return COL_NEON_CYAN // 0-30m: Cyber Cyan
+  } else if (altitude < 80) {
+    return COL_NEON_MAGENTA // 30-80m: Synthwave Magenta
+  } else if (altitude < 150) {
+    return COL_NEON_GOLD // 80-150m: Hyper Gold
+  } else if (altitude < 250) {
+    return COL_NEON_GREEN // 150-250m: Acid Green
+  } else {
+    return COL_NEON_PURPLE // 250m+: Celestial Diamond
+  }
+}
 
 /** Cycling palette for platform neon trim */
 const NEON_TRIM_COLORS = [COL_NEON_CYAN, COL_NEON_MAGENTA, COL_NEON_GOLD, COL_NEON_GREEN]
@@ -33,21 +54,26 @@ const MOVING_PLATFORM_INTERVAL = 3
 
 // ─── Platform Pool Configuration ──────────────────────────────────────────────
 export const POOL_SIZE = 8
-export const PLATFORM_SPACING_Y = 1.3 // height increase per step
+export const PLATFORM_SPACING_Y = 1.9 // comfortable parkour jump height & 15.2m spiral headroom
 export const SPIRAL_POINTS = [
-  { x: 5.5, z: 5.0, sx: 6.0, sz: 3.0 },
-  { x: 10.5, z: 7.5, sx: 6.0, sz: 3.0 },
-  { x: 8.0, z: 11.0, sx: 6.5, sz: 3.2 },
-  { x: 5.5, z: 13.5, sx: 6.0, sz: 3.0 },
-  { x: 10.5, z: 12.0, sx: 6.0, sz: 3.0 },
-  { x: 8.0, z: 8.5, sx: 6.5, sz: 3.2 },
-  { x: 5.5, z: 4.5, sx: 6.0, sz: 3.0 },
-  { x: 10.5, z: 3.5, sx: 6.0, sz: 3.0 },
+  { x: 8.0, z: 5.2, sx: 4.2, sz: 2.6 },  // [0] South (facing launchpad)
+  { x: 11.8, z: 5.8, sx: 3.8, sz: 2.8 }, // [1] South-East
+  { x: 12.4, z: 8.8, sx: 3.6, sz: 3.0 }, // [2] East
+  { x: 11.2, z: 11.8, sx: 3.8, sz: 2.8 },// [3] North-East
+  { x: 8.0, z: 12.6, sx: 4.2, sz: 2.6 }, // [4] North
+  { x: 4.8, z: 11.8, sx: 3.8, sz: 2.8 }, // [5] North-West
+  { x: 3.6, z: 8.8, sx: 3.6, sz: 3.0 },  // [6] West
+  { x: 4.8, z: 5.8, sx: 3.8, sz: 2.8 }   // [7] South-West
 ]
 
 export interface RecycledPlatform {
   entity: ReturnType<typeof engine.addEntity>
   labelEntity: ReturnType<typeof engine.addEntity>
+  gemEntity: ReturnType<typeof engine.addEntity>
+  hasGem: boolean
+  obstacleEntity: ReturnType<typeof engine.addEntity>
+  hasObstacle: boolean
+  obstaclePhase: number
   /** Four neon trim entities: [rightX, leftX, farZ, nearZ] */
   trimEntities: ReturnType<typeof engine.addEntity>[]
   baseY: number
@@ -57,6 +83,7 @@ export interface RecycledPlatform {
 }
 
 export const platformPool: RecycledPlatform[] = []
+export const platformEntityMap = new Map<ReturnType<typeof engine.addEntity>, RecycledPlatform>()
 export let lavaEntity: ReturnType<typeof engine.addEntity> | null = null
 
 // ─── Solid Box Platform Helper ────────────────────────────────────────────────
@@ -183,24 +210,159 @@ export function repositionTrim(
 // ─── Build Course ─────────────────────────────────────────────────────────────
 export function buildCourse() {
   buildMoltenLavaAbyss()
+  //  buildAtmosphericFog()
   buildStartIsland()
   buildInfinitePlatformPool()
+  build3DLeaderboard()
 }
 
-// ─── Rising Molten Lava Lake ──────────────────────────────────────────────────
+// ─── Rising Electric Void Abyss & Perimeter Containment ───────────────────────
 function buildMoltenLavaAbyss() {
+  // 1. Solid Ground Floor with Collider across entire 16x16 parcel
+  const groundFloor = engine.addEntity()
+  Transform.create(groundFloor, {
+    position: Vector3.create(8.0, 0.0, 8.0),
+    scale: Vector3.create(16.0, 0.1, 16.0)
+  })
+  MeshRenderer.setBox(groundFloor)
+  MeshCollider.setBox(groundFloor)
+  Material.setPbrMaterial(groundFloor, {
+    albedoColor: Color4.create(0.01, 0.01, 0.02, 1),
+    metallic: 0.0,
+    roughness: 1.0
+  })
+
+  // 2. Vast Horizon Void Base (Visual-only expansive void stretching into distance)
+  // const horizonVoid = engine.addEntity()
+  // Transform.create(horizonVoid, {
+  //   position: Vector3.create(8.0, -0.05, 8.0),
+  //   scale: Vector3.create(48.0, 0.1, 48.0)
+  // })
+  // MeshRenderer.setBox(horizonVoid)
+  // Material.setPbrMaterial(horizonVoid, {
+  //   texture: Material.Texture.Common({
+  //     src: 'assets/textures/void.jpg',
+  //     wrapMode: TextureWrapMode.TWM_REPEAT,
+  //     filterMode: TextureFilterMode.TFM_TRILINEAR
+  //   }),
+  //   emissiveTexture: Material.Texture.Common({
+  //     src: 'assets/textures/void.jpg',
+  //     wrapMode: TextureWrapMode.TWM_REPEAT,
+  //     filterMode: TextureFilterMode.TFM_TRILINEAR
+  //   }),
+  //   emissiveColor: Color4.create(0.60, 0.20, 0.90, 1),
+  //   emissiveIntensity: 1.8,
+  //   metallic: 0.0,
+  //   roughness: 1.0
+  // })
+
+  // 3. 80-Meter Tall Invisible Boundary Collision Forcefields
+  // Surrounds the 16x16 parcel so players can NEVER fall outside the scene into world terrain
+  const wallConfigs = [
+    { pos: Vector3.create(0.05, 40.0, 8.0), scale: Vector3.create(0.1, 80.0, 16.0) }, // West
+    { pos: Vector3.create(15.95, 40.0, 8.0), scale: Vector3.create(0.1, 80.0, 16.0) }, // East
+    { pos: Vector3.create(8.0, 40.0, 0.05), scale: Vector3.create(16.0, 80.0, 0.1) }, // South
+    { pos: Vector3.create(8.0, 40.0, 15.95), scale: Vector3.create(16.0, 80.0, 0.1) }  // North
+  ]
+  for (const cfg of wallConfigs) {
+    const wall = engine.addEntity()
+    Transform.create(wall, { position: cfg.pos, scale: cfg.scale })
+    MeshCollider.setBox(wall)
+  }
+
+  // 4. Rising Electric Void Abyss Plane
   lavaEntity = engine.addEntity()
   Transform.create(lavaEntity, {
     position: Vector3.create(8.0, 0.05, 8.0),
-    scale: Vector3.create(60.8, 0.3, 60.8)
+    scale: Vector3.create(50.8, 0.2, 50.8)
   })
   MeshRenderer.setBox(lavaEntity)
   Material.setPbrMaterial(lavaEntity, {
-    albedoColor: Color4.create(1.0, 0.25, 0.05, 1),
-    emissiveColor: Color4.create(1.0, 0.2, 0.02, 1),
-    metallic: 0.1,
-    roughness: 0.9
+    texture: Material.Texture.Common({
+      src: 'assets/textures/void.jpg',
+      wrapMode: TextureWrapMode.TWM_REPEAT,
+      filterMode: TextureFilterMode.TFM_TRILINEAR
+    }),
+    emissiveTexture: Material.Texture.Common({
+      src: 'assets/textures/void.jpg',
+      wrapMode: TextureWrapMode.TWM_REPEAT,
+      filterMode: TextureFilterMode.TFM_TRILINEAR
+    }),
+    emissiveColor: Color4.create(0.85, 0.40, 1.00, 1), // glowing electric violet pulse
+    emissiveIntensity: 2.2,
+    metallic: 0.0,
+    roughness: 1.0
   })
+}
+
+export const fogEntities: ReturnType<typeof engine.addEntity>[] = []
+
+/** Builds volumetric atmospheric mist curtains around the perimeter & horizontal swirling cloud layers */
+function buildAtmosphericFog() {
+  const fogMat = {
+    texture: Material.Texture.Common({
+      src: 'assets/textures/fog.png',
+      wrapMode: TextureWrapMode.TWM_REPEAT,
+      filterMode: TextureFilterMode.TFM_BILINEAR,
+      tiling: { x: 2, y: 2 }
+    }),
+    emissiveTexture: Material.Texture.Common({
+      src: 'assets/textures/fog.png',
+      wrapMode: TextureWrapMode.TWM_REPEAT,
+      filterMode: TextureFilterMode.TFM_BILINEAR,
+      tiling: { x: 2, y: 2 }
+    }),
+    albedoColor: Color4.create(1, 1, 1, 1),
+    emissiveColor: Color4.create(0.60, 0.30, 0.95, 0.9),
+    emissiveIntensity: 2.4,
+    transparencyMode: MaterialTransparencyMode.MTM_ALPHA_BLEND
+  }
+
+  // 1. Four Distant Horizon Fog Curtains (Placed far in the background around the scene)
+  const distantHorizonConfigs = [
+    { pos: Vector3.create(-12.0, 24.0, 8.0), scale: Vector3.create(48.0, 48.0, 1.0), rot: Quaternion.fromEulerDegrees(0, 90, 0) },   // Far West
+    { pos: Vector3.create(28.0, 24.0, 8.0), scale: Vector3.create(48.0, 48.0, 1.0), rot: Quaternion.fromEulerDegrees(0, -90, 0) },   // Far East
+    { pos: Vector3.create(8.0, 24.0, -12.0), scale: Vector3.create(48.0, 48.0, 1.0), rot: Quaternion.fromEulerDegrees(0, 0, 0) },     // Far South
+    { pos: Vector3.create(8.0, 24.0, 28.0), scale: Vector3.create(48.0, 48.0, 1.0), rot: Quaternion.fromEulerDegrees(0, 180, 0) }    // Far North
+  ]
+  for (const cfg of distantHorizonConfigs) {
+    const wallFog = engine.addEntity()
+    Transform.create(wallFog, { position: cfg.pos, scale: cfg.scale, rotation: cfg.rot })
+    MeshRenderer.setPlane(wallFog)
+    Material.setPbrMaterial(wallFog, {
+      ...fogMat,
+      emissiveIntensity: 1.0
+    })
+    fogEntities.push(wallFog)
+  }
+
+  // 2. High-Altitude Stratosphere Cloud Layers (Only at 28m and 55m — far above lounge)
+  const highCloudConfigs = [
+    { y: 28.0, rotY: 45, scale: 32.0 },
+    { y: 55.0, rotY: 90, scale: 32.0 }
+  ]
+  for (const cfg of highCloudConfigs) {
+    const layer = engine.addEntity()
+    Transform.create(layer, {
+      position: Vector3.create(8.0, cfg.y, 8.0),
+      scale: Vector3.create(cfg.scale, cfg.scale, 1.0),
+      rotation: Quaternion.fromEulerDegrees(90, cfg.rotY, 0)
+    })
+    MeshRenderer.setPlane(layer)
+    Material.setPbrMaterial(layer, {
+      ...fogMat,
+      emissiveIntensity: 0.8
+    })
+    fogEntities.push(layer)
+  }
+}
+
+/** Instantly snaps the rising void back down to ground level (Y = 0.05) */
+export function resetLavaPosition() {
+  if (lavaEntity) {
+    const t = Transform.getMutable(lavaEntity)
+    t.position = Vector3.create(8.0, 0.05, 8.0)
+  }
 }
 
 // ─── Lobby Waiting Lounge & Course Launchpad ──────────────────────────────────
@@ -251,7 +413,7 @@ function buildInfinitePlatformPool() {
     const entity = engine.addEntity()
     Transform.create(entity, {
       position: Vector3.create(slot.x, initialY, slot.z),
-      scale: Vector3.create(slot.sx, 0.5, slot.sz)
+      scale: Vector3.create(slot.sx, 0.35, slot.sz)
     })
     MeshRenderer.setBox(entity)
     MeshCollider.setBox(entity)
@@ -269,7 +431,7 @@ function buildInfinitePlatformPool() {
       MovingPlatform.create(entity, {
         originX: slot.x,
         originZ: slot.z,
-        amplitude: 1.8,   // ±1.8 m X swing
+        amplitude: 1.1,   // ±1.1 m swing (keeps jumps reachable & clear)
         period: 3.5,   // seconds per full cycle
         elapsed: i * 0.7  // stagger start phase
       })
@@ -287,15 +449,58 @@ function buildInfinitePlatformPool() {
     })
     Billboard.create(label, { billboardMode: BillboardMode.BM_Y })
 
-    platformPool.push({
+    // Floating Cyber-Gem on platform
+    const gem = engine.addEntity()
+    Transform.create(gem, {
+      position: Vector3.create(slot.x, initialY + 0.9, slot.z),
+      scale: Vector3.create(0.38, 0.38, 0.38),
+      rotation: Quaternion.fromEulerDegrees(45, 45, 0)
+    })
+    MeshRenderer.setBox(gem)
+    Material.setPbrMaterial(gem, {
+      albedoColor: Color4.create(0.1, 1.0, 0.8, 1),
+      emissiveColor: Color4.create(0.2, 1.0, 0.9, 1),
+      emissiveIntensity: 3.5,
+      metallic: 0.8,
+      roughness: 0.1
+    })
+    const hasGem = i !== 0 && (i % 2 === 1)
+    VisibilityComponent.create(gem, { visible: hasGem })
+
+    // Vertical Left-to-Right Moving Hazard Cylinder Obstacle (Visual + Programmatic Zap)
+    const obstacle = engine.addEntity()
+    Transform.create(obstacle, {
+      position: Vector3.create(slot.x, initialY + 0.95, slot.z),
+      scale: Vector3.create(0.55, 1.4, 0.55),
+      rotation: Quaternion.fromEulerDegrees(0, 0, 0)
+    })
+    MeshRenderer.setCylinder(obstacle, 1, 1)
+    Material.setPbrMaterial(obstacle, {
+      albedoColor: Color4.create(1.0, 0.15, 0.25, 1),
+      emissiveColor: Color4.create(1.0, 0.20, 0.35, 1),
+      emissiveIntensity: 3.5,
+      metallic: 0.8,
+      roughness: 0.15
+    })
+    const hasObstacle = i !== 0 && (i % 3 === 2)
+    VisibilityComponent.create(obstacle, { visible: hasObstacle })
+
+    const entry: RecycledPlatform = {
       entity,
       labelEntity: label,
+      gemEntity: gem,
+      hasGem,
+      obstacleEntity: obstacle,
+      hasObstacle,
+      obstaclePhase: i * 1.2,
       trimEntities,
       baseY: initialY,
       slotIndex: i,
       altitudeTier: 0,
       isMoving
-    })
+    }
+    platformPool.push(entry)
+    platformEntityMap.set(entity, entry)
   }
 }
 
@@ -308,6 +513,9 @@ export function resetPlatformPool() {
 
     p.baseY = initialY
     p.altitudeTier = 0
+    p.hasGem = i !== 0 && (i % 2 === 1)
+    p.hasObstacle = i !== 0 && (i % 3 === 2)
+    p.obstaclePhase = i * 1.2
 
     const transform = Transform.getMutable(p.entity)
     transform.position = Vector3.create(slot.x, initialY, slot.z)
@@ -317,6 +525,17 @@ export function resetPlatformPool() {
 
     const labelShape = TextShape.getMutable(p.labelEntity)
     labelShape.text = `${Math.round(initialY - 2.0)}m`
+
+    // Reset gem position and visibility
+    const gemTransform = Transform.getMutable(p.gemEntity)
+    gemTransform.position = Vector3.create(slot.x, initialY + 0.9, slot.z)
+    VisibilityComponent.createOrReplace(p.gemEntity, { visible: p.hasGem })
+
+    // Reset obstacle position and visibility
+    const obsTransform = Transform.getMutable(p.obstacleEntity)
+    obsTransform.position = Vector3.create(slot.x, initialY + 0.95, slot.z)
+    p.obstaclePhase = i * 1.2
+    VisibilityComponent.createOrReplace(p.obstacleEntity, { visible: p.hasObstacle })
 
     // Reset trim strips back to initial slot positions
     repositionTrim(p.trimEntities, slot.x, initialY, slot.sx, slot.z, slot.sz)

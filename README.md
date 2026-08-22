@@ -1,114 +1,116 @@
-# ⛓ Chainmates
+# ⛓ Chainmates — Endless Co-Op Climb
 
-**A co-op tether parkour game for Decentraland** — built for the Friendzone Mobile Buildathon.
+> **A Mobile-First Co-Op Tether Climbing Experience for Decentraland**  
+> Built for the **Friendzone Mobile Buildathon 2026** ($8,000 MANA Prize Pool).
 
 [![DCL SDK7](https://img.shields.io/badge/DCL-SDK7-red)](https://docs.decentraland.org/creator/)
-[![Mobile First](https://img.shields.io/badge/mobile-first-blue)]()
-[![Open Source](https://img.shields.io/badge/license-MIT-green)]()
+[![Mobile First](https://img.shields.io/badge/Mobile-First-blue)]()
+[![Persistent Leaderboard](https://img.shields.io/badge/Leaderboard-JSONBin.io-purple)]()
+[![Open Source](https://img.shields.io/badge/License-MIT-green)]()
+
+---
+
+## 🌟 Overview & Core Mechanics
+
+**Chainmates** reimagines social multiplayer in the open metaverse. Two players are bound by a physical, elastic tether and must cooperate to ascend an infinitely procedural tower of oscillating kinetic platforms while escaping a rising **Electric Void Abyss**.
+
+### ✨ Key Features
+
+1. **⛓ Dynamic 4.0m Physical Tether**
+   - True spatial cooperation: jumping too far apart triggers elastic yanks.
+   - Hoist and drag physics assist dangling partners.
+   - 3 customizable tether skins: *Industrial Chain*, *Climbing Rope*, and *Cyber Neon*.
+
+2. **🤖 AI Ball Droid Companion (Solo Practice Mode)**
+   - Judges and solo players can jump in immediately without waiting for a partner.
+   - A floating 3D Ball Droid companion (`assets/asset-packs/ball_droid`) tethers to you, simulating authentic co-op tension and physics.
+
+3. **🌌 Rising Electric Void Abyss**
+   - Molten liquid energy accelerates upward from the ground as your squad climbs higher.
+   - Dynamic danger alerts and distance indicators keep the adrenaline pumping.
+
+4. **🏔️ Infinite Procedural Platform Recycling**
+   - Kinetic platforms oscillate on X/Z axes and automatically recycle upward into the sky as you ascend.
+
+5. **🏆 Persistent Cross-Session Leaderboard**
+   - Backed by JSONBin.io REST backend.
+   - Top team scores and solo practice records survive server restarts and persist across all players.
+
+6. **📱 Intentional Mobile-First UX**
+   - Built with `ReactEcsRenderer` using `screenInset: 'interactable'` to clear native virtual joysticks.
+   - Touch targets ≥58px, high-contrast typography, and dedicated **How To Play** interactive guide.
+   - Optimized PBR material caching to guarantee smooth 60 FPS on mobile GPUs.
 
 ---
 
 ## 🎮 How to Play
 
-1. **Enter the scene** — you spawn at the starting pad.
-2. **Find a partner** — when another player joins, you're automatically tethered together.
-3. **Pick a chain skin** — Chain, Rope, or Neon (cosmetic only).
-4. **Press E** (or the E button on mobile) to ready up — a countdown starts.
-5. **Cross all 5 obstacles** as a team:
-   - ① Narrow beam — stay aligned
-   - ② Gap jump — jump simultaneously
-   - ③ Moving platform — time your crossing together
-   - ④ Split paths — negotiate which way through the tether
-   - 🏁 Finish gate — time stops, leaderboard updates
-
-### The Tether
-
-- You and your partner are linked by a **5-meter chain**.
-- Stray too far → the chain **yanks you both back** toward each other.
-- The chain color tells you the tension: **grey = slack → gold = taut → red = snap**.
-- There's no way to play solo — the tether *is* the mechanic.
-
-### Controls (Mobile + Desktop)
-
-| Action | Mobile | Desktop |
-|---|---|---|
-| Move | On-screen joystick | WASD |
-| Jump | Jump button (bottom right area) | Space |
-| Ready up / interact | E button | E key |
-| Camera | Drag | Mouse |
-
-> No IA_ACTION_3–6 buttons are used — all core actions work with the standard mobile HUD.
-
----
-
-## 🏗 Tech Stack
-
-- **Decentraland SDK7** (TypeScript ECS)
-- **Creator Hub** project
-- **MessageBus** for P2P player position sync (10fps, lerped)
-- **movePlayerTo** (`~system/RestrictedActions`) for yank nudge
-- **ReactEcsRenderer** with `screenInset: 'interactable'` for mobile safe area
-- All geometry uses SDK7 primitives (MeshRenderer) — zero external GLB assets → fast load
-
----
-
-## 📱 Mobile Checklist
-
-- [x] `screenInset: 'interactable'` — UI clears DCL's left-hand controls
-- [x] All touch targets ≥52px height
-- [x] No UI in bottom-right corner (reserved for DCL action buttons)
-- [x] No IA_ACTION_3–6 bindings
-- [x] All meshes are SDK primitives — well under 1M triangle soft limit
-- [x] HUD updates at 10fps max (not every frame)
-- [x] Test on Samsung Galaxy A54 target device
-
----
-
-## 🛠 Local Development
-
-```bash
-npm install
-npm run start
+```
+   [ Squad Lounge ] ───(Link Tether or Solo Practice)───> [ 3-2-1 Countdown ]
+                                                                   │
+   [ Global High Score ] <───(Game Over / Fall) <─── [ Endless Kinetic Climb ]
 ```
 
-Open the preview in two browser windows to test multiplayer locally.
+1. **Lounge & Pairing:**
+   - Step into the **Squad Lounge**.
+   - Tap **"LINK TETHER"** on an available player to form a squad, OR tap **"SOLO PRACTICE RUN"** to climb with the Ball Droid.
+2. **Ascend Together:**
+   - Coordinate your jumps across oscillating platforms.
+   - Keep the chain in **SLACK** (Green) or **TAUT** (Gold) range (<4.0m). Avoid red **YANKED** snaps!
+3. **Outrun the Void:**
+   - Stay above the rising purple void. Falling into the abyss ends the run and submits your squad's altitude & score to the global leaderboard.
 
-### File Structure
+---
+
+## 🕹️ Controls
+
+| Action | Mobile Device | Desktop Browser |
+|---|---|---|
+| **Movement** | Virtual Joystick (Left Thumb) | `W` `A` `S` `D` / Arrow Keys |
+| **Jump** | Native Jump Button (Right Thumb) | `Spacebar` |
+| **Look / Camera** | Drag screen surface | Mouse Drag |
+| **Interact / UI** | Direct Touch (Large Touch Targets) | Left Click |
+
+---
+
+## 🏗️ Architecture & Tech Stack
+
+- **Decentraland SDK7 (ECS)** — TypeScript Entity Component System.
+- **React-ECS UI** — Reactive declarative HUD, responsive modals, and touch-optimized navigation.
+- **REST Leaderboard** — JSONBin.io integration with graceful offline fallback.
+- **Restricted Actions** — `movePlayerTo` for elastic tether physics.
+- **PBR Caching System** — Eliminates per-frame GPU shader rebinds for buttery-smooth mobile gameplay.
 
 ```
 src/
-├── index.ts        # Entry point — wires all systems
-├── components.ts   # Custom ECS component definitions
-├── gameState.ts    # State machine + MessageBus + leaderboard
-├── playerSync.ts   # Position broadcast + proxy entities (lerped)
-├── tether.ts       # Chain visual + yank system
-├── course.ts       # Obstacle course (5 obstacles, SDK primitives only)
-├── checkpoints.ts  # Z-threshold checkpoint + fall detection
-├── systems.ts      # Moving platform oscillator
-├── hud.ts          # In-world 3D HUD (timer, tension, count)
-└── ui.tsx          # React-DCL overlay UI (lobby/countdown/HUD/finish)
+├── index.ts              # Scene bootstrap, system registration, & lifecycle
+├── gameState.ts          # Central singleton, phase machine, scoring, & message bus
+├── practiceBot.ts        # 3D Ball Droid AI companion & hover follow mechanics
+├── tether.ts             # Elastic tether physics, crossed planes, & material caching
+├── course.ts             # Infinite platform pool, neon trims, & Electric Void abyss
+├── systems.ts            # Endless platform recycling & kinetic oscillation systems
+├── checkpoints.ts        # Dynamic void collision & fall detection
+├── serverLeaderboard.ts  # JSONBin.io persistent REST leaderboard client
+└── ui.tsx                # React-ECS HUD, Squad Lobby, Leaderboard, & How-To-Play modals
 ```
 
 ---
 
-## 🚀 Deploy
+## 💻 Local Development
 
 ```bash
-npm run deploy
+# Install dependencies
+npm install
+
+# Run local preview
+npm run start
+
+# Build and validate bundle
+npm run build
 ```
 
-Then publish to your Decentraland World through Creator Hub.
-
 ---
 
-## 📋 Submission
+## 📜 License
 
-Built for: **DCL Regenesis Labs — Friendzone Mobile Buildathon**  
-Submitted via: DoraHacks  
-Deadline: September 4, 2026
-
----
-
-## License
-
-MIT — open source, as required by the buildathon rules.
+MIT License — Created for the Decentraland Friendzone Mobile Buildathon 2026.

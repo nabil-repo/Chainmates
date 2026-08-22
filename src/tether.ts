@@ -18,14 +18,17 @@ import { Vector3, Color4, Quaternion } from '@dcl/sdk/math'
 import { movePlayerTo } from '~system/RestrictedActions'
 import { gameState, broadcastYank } from './gameState'
 import { getProxyEntity } from './playerSync'
+import { playYankSound } from './audio'
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 const MAX_CHAIN_LENGTH = 4.0    // max chain length in meters
 const PULL_INTERVAL = 0.25   // seconds between continuous elastic pulls
 const CHAIN_RADIUS = 0.18   // visual chain width (each plane = CHAIN_RADIUS * 2 wide)
 
-// ─── Texture ──────────────────────────────────────────────────────────────────
+// ─── Texture Sources ──────────────────────────────────────────────────────────
 const CHAIN_TEXTURE_SRC = 'assets/textures/Chain.png'
+const ROPE_TEXTURE_SRC = 'assets/textures/Rope.png'
+const NEON_TEXTURE_SRC = 'assets/textures/Neon.png'
 const LINKS_PER_METER = 1.8  // link-pairs per metre of chain
 
 // ─── Skin definitions ─────────────────────────────────────────────────────────
@@ -53,6 +56,11 @@ type ChainEntity = ReturnType<typeof engine.addEntity>
 let chainPlaneA: ChainEntity | null = null
 let chainPlaneB: ChainEntity | null = null
 let pullCooldownTimer = 0
+
+// Material update caching to avoid per-frame PBR material allocations
+let lastAppliedTension: string = ''
+let lastAppliedSkin: number = -1
+let lastAppliedTilingY: number = -1
 
 const PLANE_DEPTH = 0.018  // thin axis of each plane — just enough to prevent z-fighting
 
@@ -106,7 +114,7 @@ export function tetherSystem(dt: number) {
     pullCooldownTimer -= dt
   }
 
-  // Render tether whenever we have a partner (in LOBBY, COUNTDOWN, and RUNNING)
+  // Render tether whenever we have a partner or practice droid (LOBBY, COUNTDOWN, RUNNING, PRACTICE)
   if (!gameState.partnerId) {
     setChainPlanesVisible(false)
     tetherState.tension = 'SLACK'
@@ -134,15 +142,19 @@ export function tetherSystem(dt: number) {
   if (!partnerPos) return
 
   const myPos = localTransform.position
-  const dist = Vector3.distance(myPos, partnerPos)
-  tetherState.distanceToPartner = dist
 
   // ── Position & orient the two chain planes ───────────────────────────────
   setChainPlanesVisible(true)
 
-  // Chest attachment points (~1.25 m above feet)
-  const myChest = Vector3.create(myPos.x, myPos.y + 1.25, myPos.z)
-  const partnerChest = Vector3.create(partnerPos.x, partnerPos.y + 1.25, partnerPos.z)
+  // Attachment points (waist/chest for humans, center for Ball Droid)
+  const myChest = Vector3.create(myPos.x, myPos.y + 1.1, myPos.z)
+  const isDroid = gameState.partnerId === '__SOLO__'
+  const partnerAttachY = isDroid ? partnerPos.y + 0.3 : partnerPos.y + 1.1
+  const partnerChest = Vector3.create(partnerPos.x, partnerAttachY, partnerPos.z)
+
+  const dist = Vector3.distance(myChest, partnerChest)
+  tetherState.distanceToPartner = dist
+
   const midpoint = Vector3.scale(Vector3.add(myChest, partnerChest), 0.5)
   const dir = Vector3.subtract(partnerChest, myChest)
 
@@ -194,44 +206,81 @@ export function tetherSystem(dt: number) {
     tetherState.tension = 'SLACK'
   }
 
-  // ── Apply material to both planes ───────────────────────────────────────
-  const tilingY = Math.max(dist, 0.1) * LINKS_PER_METER
+  // ── Apply material only when tension, skin, or tiling changes significantly ──
+  const tilingY = Math.round(Math.max(dist, 0.1) * LINKS_PER_METER * 2) / 2 // round to 0.5 step
 
-  if (skin === 0) {
-    // Chain skin — texture with emissive tension overlay
-    const tensionEmissive = dist >= MAX_CHAIN_LENGTH
-      ? Color4.create(1.0, 0.05, 0.05, 1)
-      : ratio > 0.7
-        ? Color4.create((ratio - 0.7) / 0.3 * 0.8, (ratio - 0.7) / 0.3 * 0.4, 0, 1)
-        : Color4.create(0, 0, 0, 0)
-    const tensionEmissiveIntensity = dist >= MAX_CHAIN_LENGTH ? 2.5 : ratio > 0.7 ? 1.2 : 0
+  const shouldUpdateMat =
+    tetherState.tension !== lastAppliedTension ||
+    skin !== lastAppliedSkin ||
+    Math.abs(tilingY - lastAppliedTilingY) >= 0.5
 
-    applyChainMaterial({
-      texture: Material.Texture.Common({
-        src: CHAIN_TEXTURE_SRC,
-        wrapMode: TextureWrapMode.TWM_REPEAT,
-        filterMode: TextureFilterMode.TFM_BILINEAR,
-        tiling: { x: 1, y: tilingY }
-      }),
-      albedoColor: Color4.create(1, 1, 1, 1),
-      metallic: 0.75,
-      roughness: 0.25,
-      transparencyMode: MaterialTransparencyMode.MTM_ALPHA_BLEND,
-      emissiveColor: tensionEmissive,
-      emissiveIntensity: tensionEmissiveIntensity
-    })
-  } else if (skin === 1) {
-    // Rope skin — plain colour, rough
-    applyChainMaterial({ albedoColor: chainColor, metallic: 0.0, roughness: 0.9, emissiveColor: emissive })
-  } else {
-    // Neon skin — emissive glow
-    applyChainMaterial({
-      albedoColor: chainColor,
-      metallic: 0.0,
-      roughness: 0.1,
-      emissiveColor: Color4.create(chainColor.r, chainColor.g, chainColor.b, 1),
-      emissiveIntensity: 3.0
-    })
+  if (shouldUpdateMat) {
+    lastAppliedTension = tetherState.tension
+    lastAppliedSkin = skin
+    lastAppliedTilingY = tilingY
+
+    if (skin === 0) {
+      // Chain skin — texture with emissive tension overlay
+      const tensionEmissive = dist >= MAX_CHAIN_LENGTH
+        ? Color4.create(1.0, 0.05, 0.05, 1)
+        : ratio > 0.7
+          ? Color4.create((ratio - 0.7) / 0.3 * 0.8, (ratio - 0.7) / 0.3 * 0.4, 0, 1)
+          : Color4.create(0, 0, 0, 0)
+      const tensionEmissiveIntensity = dist >= MAX_CHAIN_LENGTH ? 2.5 : ratio > 0.7 ? 1.2 : 0
+
+      applyChainMaterial({
+        texture: Material.Texture.Common({
+          src: CHAIN_TEXTURE_SRC,
+          wrapMode: TextureWrapMode.TWM_REPEAT,
+          filterMode: TextureFilterMode.TFM_BILINEAR,
+          tiling: { x: 1, y: tilingY }
+        }),
+        albedoColor: Color4.create(1, 1, 1, 1),
+        metallic: 0.75,
+        roughness: 0.25,
+        transparencyMode: MaterialTransparencyMode.MTM_ALPHA_BLEND,
+        emissiveColor: tensionEmissive,
+        emissiveIntensity: tensionEmissiveIntensity
+      })
+    } else if (skin === 1) {
+      // Rope skin — woven braided climbing cord with alpha cutout
+      applyChainMaterial({
+        texture: Material.Texture.Common({
+          src: ROPE_TEXTURE_SRC,
+          wrapMode: TextureWrapMode.TWM_REPEAT,
+          filterMode: TextureFilterMode.TFM_BILINEAR,
+          tiling: { x: 1, y: tilingY }
+        }),
+        albedoColor: Color4.create(1, 1, 1, 1),
+        metallic: 0.0,
+        roughness: 0.85,
+        transparencyMode: MaterialTransparencyMode.MTM_ALPHA_BLEND,
+        emissiveColor: emissive,
+        emissiveIntensity: dist >= MAX_CHAIN_LENGTH ? 2.0 : 0.2
+      })
+    } else {
+      // Neon skin — glowing cyber laser energy beam with transparent alpha blend
+      applyChainMaterial({
+        texture: Material.Texture.Common({
+          src: NEON_TEXTURE_SRC,
+          wrapMode: TextureWrapMode.TWM_REPEAT,
+          filterMode: TextureFilterMode.TFM_BILINEAR,
+          tiling: { x: 1, y: tilingY }
+        }),
+        emissiveTexture: Material.Texture.Common({
+          src: NEON_TEXTURE_SRC,
+          wrapMode: TextureWrapMode.TWM_REPEAT,
+          filterMode: TextureFilterMode.TFM_BILINEAR,
+          tiling: { x: 1, y: tilingY }
+        }),
+        albedoColor: Color4.create(1, 1, 1, 1),
+        transparencyMode: MaterialTransparencyMode.MTM_ALPHA_BLEND,
+        emissiveColor: Color4.create(chainColor.r, chainColor.g, chainColor.b, 1),
+        emissiveIntensity: dist >= MAX_CHAIN_LENGTH ? 4.0 : 2.5,
+        metallic: 0.1,
+        roughness: 0.1
+      })
+    }
   }
 
   // ── Responsive Elastic Tether & Dangling Physics ─────────────────────────
@@ -240,6 +289,7 @@ export function tetherSystem(dt: number) {
   if (dist > MAX_CHAIN_LENGTH && pullCooldownTimer <= 0) {
     pullCooldownTimer = PULL_INTERVAL
     tetherState.tension = 'YANKED'
+    playYankSound()
 
     const excessDist = dist - MAX_CHAIN_LENGTH
 
@@ -289,6 +339,7 @@ export function tetherSystem(dt: number) {
 /** Called by UI when player picks a chain skin */
 export function setChainSkin(index: number) {
   gameState.tetherSkinIndex = index
+  lastAppliedSkin = -1
 }
 
 /** Called on finish or reset — hides the chain */
@@ -296,4 +347,6 @@ export function hideChain() {
   setChainPlanesVisible(false)
   tetherState.tension = 'SLACK'
   pullCooldownTimer = 0
+  lastAppliedSkin = -1
+  lastAppliedTension = ''
 }
