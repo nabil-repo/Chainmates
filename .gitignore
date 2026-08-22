@@ -4,9 +4,10 @@ package-lock.json
 
 # Build output
 bin/
-*.js
-*.js.map
-*.d.ts
+src/**/*.js
+src/**/*.js.map
+src/**/*.d.ts
+!server/**/*.js
 
 # Logs
 logs
