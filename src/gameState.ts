@@ -127,9 +127,9 @@ function getTeamId(): string {
 function getLaunchpadSlot(): { x: number; y: number; z: number } {
   const isFirst = !gameState.partnerId || gameState.localId < gameState.partnerId
   return {
-    x: isFirst ? 6.8 : 9.2,
-    y: 2.6,
-    z: 3.0
+    x: isFirst ? 7.0 : 9.0,
+    y: 2.2,
+    z: 2.2
   }
 }
 
@@ -393,7 +393,7 @@ export function startPractice() {
   gameState.onCountdownTick?.(3)
 
   // Solo runs at center launchpad with Ball Droid
-  const slot = { x: 8.0, y: 2.6, z: 3.0 }
+  const slot = { x: 8.0, y: 2.2, z: 2.2 }
   lockedSpawnPos = slot
   createPracticeBot(slot.x, slot.y, slot.z)
 
@@ -596,7 +596,7 @@ function resetClimbState() {
   gameState.teamScore = 0
   gameState.currentAltitude = 0
   gameState.maxAltitude = 0
-  gameState.lavaHeight = 0.05
+  gameState.lavaHeight = -1.2
   gameState.lavaSpeed = gameState.lavaBaseSpeed
   gameState.gemsCollected = 0
   lastAchievedMilestone = 0

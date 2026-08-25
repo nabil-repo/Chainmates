@@ -54,16 +54,16 @@ const MOVING_PLATFORM_INTERVAL = 3
 
 // ─── Platform Pool Configuration ──────────────────────────────────────────────
 export const POOL_SIZE = 8
-export const PLATFORM_SPACING_Y = 1.9 // comfortable parkour jump height & 15.2m spiral headroom
+export const PLATFORM_SPACING_Y = 1.8 // smooth parkour step & 14.4m spiral headroom
 export const SPIRAL_POINTS = [
-  { x: 8.0, z: 5.2, sx: 4.2, sz: 2.6 },  // [0] South (facing launchpad)
-  { x: 11.8, z: 5.8, sx: 3.8, sz: 2.8 }, // [1] South-East
-  { x: 12.4, z: 8.8, sx: 3.6, sz: 3.0 }, // [2] East
-  { x: 11.2, z: 11.8, sx: 3.8, sz: 2.8 },// [3] North-East
-  { x: 8.0, z: 12.6, sx: 4.2, sz: 2.6 }, // [4] North
-  { x: 4.8, z: 11.8, sx: 3.8, sz: 2.8 }, // [5] North-West
-  { x: 3.6, z: 8.8, sx: 3.6, sz: 3.0 },  // [6] West
-  { x: 4.8, z: 5.8, sx: 3.8, sz: 2.8 }   // [7] South-West
+  { x: 8.0, z: 5.6, sx: 5.4, sz: 3.0 },  // [0] South (cleanly in front of launchpad at z=2.3)
+  { x: 11.6, z: 6.8, sx: 4.4, sz: 3.8 }, // [1] South-East
+  { x: 12.6, z: 9.4, sx: 3.8, sz: 4.6 }, // [2] East
+  { x: 11.6, z: 12.0, sx: 4.4, sz: 3.8 },// [3] North-East
+  { x: 8.0, z: 12.8, sx: 5.4, sz: 3.0 }, // [4] North
+  { x: 4.4, z: 12.0, sx: 4.4, sz: 3.8 }, // [5] North-West
+  { x: 3.4, z: 9.4, sx: 3.8, sz: 4.6 },  // [6] West
+  { x: 4.4, z: 6.8, sx: 4.4, sz: 3.8 }   // [7] South-West
 ]
 
 export interface RecycledPlatform {
@@ -368,13 +368,13 @@ export function resetLavaPosition() {
 // ─── Lobby Waiting Lounge & Course Launchpad ──────────────────────────────────
 function buildStartIsland() {
   // 1. Lobby Waiting Lounge (where unassigned / pre-game players hang out)
-  makePlatform(8.0, 1.0, 0.6, 9.0, 0.5, 2.4, Color4.create(0.08, 0.10, 0.20, 1))
+  makePlatform(8.0, 1.0, 0.4, 9.0, 0.4, 2.0, Color4.create(0.08, 0.10, 0.20, 1))
   // Neon trim on the lounge platform
-  makeNeonTrim(8.0, 1.0, 0.6, 9.0, 2.4, COL_NEON_CYAN)
+  makeNeonTrim(8.0, 1.0, 0.4, 9.0, 2.0, COL_NEON_CYAN)
 
   // Waiting Lounge Holographic Sign
   const loungeSign = engine.addEntity()
-  Transform.create(loungeSign, { position: Vector3.create(8.0, 2.6, 0.2) })
+  Transform.create(loungeSign, { position: Vector3.create(8.0, 2.6, 0.1) })
   TextShape.create(loungeSign, {
     text: 'SQUAD LOUNGE // PAIR & START',
     fontSize: 1.8,
@@ -383,17 +383,17 @@ function buildStartIsland() {
   Billboard.create(loungeSign, { billboardMode: BillboardMode.BM_Y })
 
   // 2. Active Course Launchpad (where the squad spawns when the run starts)
-  makePlatform(8.0, 2.0, 3.0, 7.5, 0.5, 2.8, COL_FLOATING_STONE)
+  makePlatform(8.0, 1.8, 2.3, 7.0, 0.4, 2.0, COL_FLOATING_STONE)
   // Neon trim on launchpad — gold accent
-  makeNeonTrim(8.0, 2.0, 3.0, 7.5, 2.8, COL_NEON_GOLD)
+  makeNeonTrim(8.0, 1.8, 2.3, 7.0, 2.0, COL_NEON_GOLD)
 
   // Launchpad Gateway Pylons
-  makePlatform(4.6, 3.6, 2.0, 0.3, 3.0, 0.3, COL_NEON_CYAN)
-  makePlatform(11.4, 3.6, 2.0, 0.3, 3.0, 0.3, COL_NEON_CYAN)
-  makePlatform(8.0, 5.0, 2.0, 7.1, 0.3, 0.3, COL_NEON_CYAN)
+  makePlatform(4.6, 3.2, 1.4, 0.3, 2.6, 0.3, COL_NEON_CYAN)
+  makePlatform(11.4, 3.2, 1.4, 0.3, 2.6, 0.3, COL_NEON_CYAN)
+  makePlatform(8.0, 4.5, 1.4, 7.1, 0.3, 0.3, COL_NEON_CYAN)
 
   const header = engine.addEntity()
-  Transform.create(header, { position: Vector3.create(8.0, 5.8, 2.0) })
+  Transform.create(header, { position: Vector3.create(8.0, 5.2, 1.4) })
   TextShape.create(header, {
     text: '⛓ ENDLESS CLIMB LAUNCHPAD',
     fontSize: 2.2,
@@ -406,7 +406,7 @@ function buildStartIsland() {
 function buildInfinitePlatformPool() {
   for (let i = 0; i < POOL_SIZE; i++) {
     const slot = SPIRAL_POINTS[i]
-    const initialY = 3.2 + i * PLATFORM_SPACING_Y
+    const initialY = 2.6 + i * PLATFORM_SPACING_Y
     const isMoving = i !== 0 && (i % MOVING_PLATFORM_INTERVAL) === 0
     const neonColor = NEON_TRIM_COLORS[i % NEON_TRIM_COLORS.length]
 
@@ -509,7 +509,7 @@ export function resetPlatformPool() {
   for (let i = 0; i < platformPool.length; i++) {
     const p = platformPool[i]
     const slot = SPIRAL_POINTS[p.slotIndex]
-    const initialY = 3.2 + i * PLATFORM_SPACING_Y
+    const initialY = 2.6 + i * PLATFORM_SPACING_Y
 
     p.baseY = initialY
     p.altitudeTier = 0

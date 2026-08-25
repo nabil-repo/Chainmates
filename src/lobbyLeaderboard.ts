@@ -17,9 +17,9 @@ export function build3DLeaderboard() {
   // angled at 45 degrees inward toward the player standing in the lounge
   const panel = engine.addEntity()
   Transform.create(panel, {
-    position: Vector3.create(2.4, 2.7, 0.8),
+    position: Vector3.create(-0.4, 2.7, 0),
     scale: Vector3.create(5.6, 2.9, 0.12),
-    rotation: Quaternion.fromEulerDegrees(0, 48, 0)
+    rotation: Quaternion.fromEulerDegrees(0, -80, 0)
   })
   MeshRenderer.setBox(panel)
   Material.setPbrMaterial(panel, {

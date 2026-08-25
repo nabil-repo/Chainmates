@@ -705,7 +705,7 @@ const LobbyScreen = () => {
               {/* Leaderboard Button */}
               <UiEntity
                 uiTransform={{
-                  width: '32%',
+                  width: '38%',
                   height: 48,
                   flexDirection: 'row',
                   alignItems: 'center',
@@ -716,14 +716,14 @@ const LobbyScreen = () => {
                   uiState.showLeaderboardModal = true
                 }}
               >
-                <Icon src='assets/icons/crown.png' size={16} color={C.gold} margin={{ right: 6 }} />
-                <Label value='RANKS' fontSize={13} color={C.gold} font='sans-serif' />
+                <Icon src='assets/icons/crown.png' size={18} color={C.gold} margin={{ right: 6 }} />
+                <Label value='LEADERBOARD' fontSize={13} color={C.gold} font='sans-serif' />
               </UiEntity>
 
               {/* How To Play Button */}
               <UiEntity
                 uiTransform={{
-                  width: '32%',
+                  width: '34%',
                   height: 48,
                   flexDirection: 'row',
                   alignItems: 'center',
@@ -741,7 +741,7 @@ const LobbyScreen = () => {
               {/* Music Toggle Button */}
               <UiEntity
                 uiTransform={{
-                  width: '32%',
+                  width: '24%',
                   height: 48,
                   flexDirection: 'row',
                   alignItems: 'center',
@@ -753,7 +753,7 @@ const LobbyScreen = () => {
                 }}
               >
                 <Label
-                  value={uiState.musicEnabled ? '🎵 BGM: ON' : '🔇 BGM: OFF'}
+                  value={uiState.musicEnabled ? '🎵 ON' : '🔇 OFF'}
                   fontSize={13}
                   color={uiState.musicEnabled ? C.emerald : C.textMuted}
                   font='sans-serif'
@@ -855,7 +855,7 @@ const CountdownScreen = () => (
 // ─── 3. RUNNING HUD ───────────────────────────────────────────────────────────
 const RunningHud = () => {
   const lavaDist = Math.max(0, Math.round((gameState.currentAltitude + 2.0 - gameState.lavaHeight) * 10) / 10)
-  const lavaNear = lavaDist < 3.0
+  const lavaNear = lavaDist < 2.2 && gameState.currentElapsedMs > 6000
   const tension = tetherState.tension
 
   // Tension badge info
@@ -890,7 +890,7 @@ const RunningHud = () => {
         <VDivider />
         <StatBox icon='assets/icons/mountain.png' label='ALTITUDE' value={`${gameState.currentAltitude} M`} color={C.cyan} isMono={true} />
         <VDivider />
-        <StatBox icon='assets/icons/flame.png' label='VOID GAP' value={`-${lavaDist} M`} color={lavaNear ? C.red : C.purple} isMono={true} />
+        <StatBox icon='assets/icons/flame.png' label='VOID GAP' value={`${lavaDist.toFixed(1)} M`} color={lavaNear ? C.red : C.purple} isMono={true} />
         <VDivider />
         <StatBox icon='assets/icons/star.png' label='GEMS' value={`💎 ${gameState.gemsCollected || 0}`} color={C.emerald} isMono={true} />
         <VDivider />
