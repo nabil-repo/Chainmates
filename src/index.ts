@@ -32,7 +32,8 @@ import {
   movingPlatformSystem,
   gemCollectionSystem,
   hazardObstacleSystem,
-  fogAnimationSystem
+  fogAnimationSystem,
+  platformTypeSystem
 } from './systems'
 import { setupHud, hudSystem } from './hud'
 import { buildCourse } from './course'
@@ -42,6 +43,7 @@ import {
   setUiPhase,
   setUiCountdown,
   setUiLeaderboard,
+  setUiSoloLeaderboard,
   setUiYankFlash,
   tickUi,
   updateUiEach
@@ -72,6 +74,9 @@ export function main() {
     update3DLeaderboard(board)
     // Persist every leaderboard update to JSONBin
     pushPersistentLeaderboard()
+  }
+  gameState.onSoloLeaderboardUpdate = (board) => {
+    setUiSoloLeaderboard(board)
   }
   gameState.onYankReceived = () => {
     yankFlashTimer = YANK_FLASH_DURATION
@@ -115,6 +120,7 @@ export function main() {
   engine.addSystem(tetherSystem, 20, 'TetherSystem')
   engine.addSystem(checkpointSystem, 30, 'CheckpointSystem')
   engine.addSystem(gemCollectionSystem, 32, 'GemCollectionSystem')
+  engine.addSystem(platformTypeSystem, 33, 'PlatformTypeSystem')
   engine.addSystem(hazardObstacleSystem, 34, 'HazardObstacleSystem')
   engine.addSystem(endlessPlatformRecycleSystem, 35, 'EndlessRecycleSystem')
   engine.addSystem(lavaSystem, 40, 'LavaSystem')

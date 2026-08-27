@@ -6,7 +6,7 @@
  *  - Kinetic moving platform oscillations (with neon trim sync)
  */
 
-import { engine, Transform, TextShape, Material, VisibilityComponent } from '@dcl/sdk/ecs'
+import { engine, Transform, TextShape, Material, VisibilityComponent, MeshCollider } from '@dcl/sdk/ecs'
 import { Vector3, Quaternion, Color4 } from '@dcl/sdk/math'
 import { MovingPlatform } from './components'
 import { gameState } from './gameState'
@@ -18,7 +18,8 @@ import {
   PLATFORM_SPACING_Y,
   SPIRAL_POINTS,
   repositionTrim,
-  getAltitudeBiomeColor
+  getAltitudeBiomeColor,
+  COL_FLOATING_STONE
 } from './course'
 import { playGemSound, playYankSound } from './audio'
 import { movePlayerTo } from '~system/RestrictedActions'
@@ -74,9 +75,20 @@ export function endlessPlatformRecycleSystem(_dt: number) {
       obsTransform.position = Vector3.create(slot.x, newY + 0.95, slot.z)
       VisibilityComponent.createOrReplace(p.obstacleEntity, { visible: p.hasObstacle })
 
+      // All recycled platforms are normal
+      p.type = 'normal'
+      VisibilityComponent.createOrReplace(p.entity, { visible: true })
+      MeshCollider.setBox(p.entity)
+      Material.setPbrMaterial(p.entity, {
+        albedoColor: COL_FLOATING_STONE,
+        metallic: 0.5,
+        roughness: 0.4
+      })
+
       // Keep neon trim strips positioned correctly on the recycled platform & apply altitude biome color
       repositionTrim(p.trimEntities, slot.x, newY, slot.sx, slot.z, slot.sz)
       for (const trim of p.trimEntities) {
+        VisibilityComponent.createOrReplace(trim, { visible: true })
         Material.setPbrMaterial(trim, {
           albedoColor: Color4.create(biomeColor.r * 0.2, biomeColor.g * 0.2, biomeColor.b * 0.2, 1),
           emissiveColor: biomeColor,
@@ -91,7 +103,8 @@ export function endlessPlatformRecycleSystem(_dt: number) {
         const mp = MovingPlatform.getMutable(p.entity)
         mp.originX = slot.x
         mp.originZ = slot.z
-        // Keep elapsed running (staggered phase survives recycle)
+        // Randomise start phase on recycle so platforms don't all sync up
+        mp.elapsed = Math.random() * mp.period
       }
     }
   }
@@ -256,3 +269,8 @@ export function fogAnimationSystem(dt: number) {
   }
 }
 
+
+/** Handles dynamic platform types (reserved for future platform behaviours) */
+export function platformTypeSystem(_dt: number) {
+  // No dynamic platform types active
+}

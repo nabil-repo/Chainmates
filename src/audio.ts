@@ -37,9 +37,9 @@ export function startBgMusic() {
   const e = getMusicEntity()
   musicPlaying = true
   AudioSource.createOrReplace(e, {
-    audioClipUrl: 'assets/sounds/bg_music.wav',
+    audioClipUrl: 'assets/sounds/bg_music.mp3',
     playing: true,
-    volume: 0.35,
+    volume: 0.7,
     loop: true
   })
 }
@@ -49,9 +49,9 @@ export function stopBgMusic() {
   const e = getMusicEntity()
   musicPlaying = false
   AudioSource.createOrReplace(e, {
-    audioClipUrl: 'assets/sounds/bg_music.wav',
+    audioClipUrl: 'assets/sounds/bg_music.mp3',
     playing: false,
-    volume: 0.35,
+    volume: 0.7,
     loop: true
   })
 }

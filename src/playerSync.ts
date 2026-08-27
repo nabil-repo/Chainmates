@@ -49,7 +49,7 @@ export function playerSyncSystem(dt: number) {
     const localTransform = Transform.getOrNull(engine.PlayerEntity)
     if (localTransform) {
       const p = localTransform.position
-      broadcastPosition(p.x, p.y, p.z)
+      broadcastPosition(Math.round(p.x * 100) / 100, Math.round(p.y * 100) / 100, Math.round(p.z * 100) / 100)
     }
   }
 

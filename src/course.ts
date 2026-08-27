@@ -80,6 +80,8 @@ export interface RecycledPlatform {
   slotIndex: number
   altitudeTier: number
   isMoving: boolean
+  type: 'normal' | 'fragile' | 'bouncy'
+  fragileTimer: number
 }
 
 export const platformPool: RecycledPlatform[] = []
@@ -293,6 +295,8 @@ function buildMoltenLavaAbyss() {
     metallic: 0.0,
     roughness: 1.0
   })
+  // Hidden until a run starts
+  VisibilityComponent.create(lavaEntity, { visible: false })
 }
 
 export const fogEntities: ReturnType<typeof engine.addEntity>[] = []
@@ -357,11 +361,19 @@ function buildAtmosphericFog() {
   }
 }
 
-/** Instantly snaps the rising void back down to ground level (Y = 0.05) */
+/** Instantly snaps the rising void back down to ground level (Y = 0.05) and hides it */
 export function resetLavaPosition() {
   if (lavaEntity) {
     const t = Transform.getMutable(lavaEntity)
     t.position = Vector3.create(8.0, 0.05, 8.0)
+    VisibilityComponent.createOrReplace(lavaEntity, { visible: false })
+  }
+}
+
+/** Show or hide the lava entity (shown only during active runs) */
+export function setLavaVisible(visible: boolean) {
+  if (lavaEntity) {
+    VisibilityComponent.createOrReplace(lavaEntity, { visible })
   }
 }
 
@@ -497,7 +509,9 @@ function buildInfinitePlatformPool() {
       baseY: initialY,
       slotIndex: i,
       altitudeTier: 0,
-      isMoving
+      isMoving,
+      type: 'normal',
+      fragileTimer: 0
     }
     platformPool.push(entry)
     platformEntityMap.set(entity, entry)
@@ -516,6 +530,16 @@ export function resetPlatformPool() {
     p.hasGem = i !== 0 && (i % 2 === 1)
     p.hasObstacle = i !== 0 && (i % 3 === 2)
     p.obstaclePhase = i * 1.2
+    p.type = 'normal'
+    p.fragileTimer = 0
+
+    VisibilityComponent.createOrReplace(p.entity, { visible: true })
+    MeshCollider.setBox(p.entity)
+    Material.setPbrMaterial(p.entity, {
+      albedoColor: COL_FLOATING_STONE,
+      metallic: 0.5,
+      roughness: 0.4
+    })
 
     const transform = Transform.getMutable(p.entity)
     transform.position = Vector3.create(slot.x, initialY, slot.z)
@@ -539,6 +563,9 @@ export function resetPlatformPool() {
 
     // Reset trim strips back to initial slot positions
     repositionTrim(p.trimEntities, slot.x, initialY, slot.sx, slot.z, slot.sz)
+    for (const trim of p.trimEntities) {
+      VisibilityComponent.createOrReplace(trim, { visible: true })
+    }
 
     // Reset moving platform oscillation state
     if (p.isMoving && MovingPlatform.has(p.entity)) {

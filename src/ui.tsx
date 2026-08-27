@@ -16,10 +16,12 @@ import {
   gameState,
   GamePhase,
   LeaderboardEntry,
+  SoloLeaderboardEntry,
   formatTime,
   startRun,
   startPractice,
   resetToLobby,
+  rematchRun,
   requestTether,
   acceptTether,
   leaveSquad
@@ -86,6 +88,7 @@ let uiState = {
   phase: 'LOBBY' as GamePhase,
   countdown: 3,
   leaderboard: [] as LeaderboardEntry[],
+  soloLeaderboard: [] as SoloLeaderboardEntry[],
   selectedSkin: 0,
   elapsedFormatted: '0:00.00',
   yankFlash: false,
@@ -93,6 +96,7 @@ let uiState = {
   renderTick: 0,
   showLeaderboardModal: false,
   showHowToPlayModal: false,
+  leaderboardTab: 'squad' as 'squad' | 'solo',
   musicEnabled: true
 }
 
@@ -101,6 +105,7 @@ let yankFlashTimer = 0
 export function setUiPhase(phase: GamePhase) { uiState.phase = phase }
 export function setUiCountdown(n: number) { uiState.countdown = n }
 export function setUiLeaderboard(board: LeaderboardEntry[]) { uiState.leaderboard = [...board] }
+export function setUiSoloLeaderboard(board: SoloLeaderboardEntry[]) { uiState.soloLeaderboard = [...board] }
 export function setUiYankFlash(v: boolean) {
   uiState.yankFlash = v
   if (v) yankFlashTimer = 1.8
@@ -181,7 +186,7 @@ const LeaderboardModal = () => (
           width: '100%',
           flexDirection: 'column',
           alignItems: 'center',
-          padding: { top: 24, bottom: 18, left: 20, right: 20 }
+          padding: { top: 20, bottom: 14, left: 20, right: 20 }
         }}
         uiBackground={{ color: C.cardHeader }}
       >
@@ -195,6 +200,23 @@ const LeaderboardModal = () => (
           color={C.textMuted}
           font='sans-serif'
         />
+        {/* Tab switcher */}
+        <UiEntity uiTransform={{ flexDirection: 'row', margin: { top: 12 } }}>
+          <UiEntity
+            uiTransform={{ width: 140, height: 34, alignItems: 'center', justifyContent: 'center', margin: { right: 8 } }}
+            uiBackground={{ color: uiState.leaderboardTab === 'squad' ? C.cyan : C.cyanDim }}
+            onMouseDown={() => { uiState.leaderboardTab = 'squad' }}
+          >
+            <Label value='⛓ SQUAD' fontSize={13} color={uiState.leaderboardTab === 'squad' ? C.insetBg : C.textWhite} font='sans-serif' />
+          </UiEntity>
+          <UiEntity
+            uiTransform={{ width: 140, height: 34, alignItems: 'center', justifyContent: 'center' }}
+            uiBackground={{ color: uiState.leaderboardTab === 'solo' ? C.purple : Color4.create(0.20, 0.10, 0.30, 1.0) }}
+            onMouseDown={() => { uiState.leaderboardTab = 'solo' }}
+          >
+            <Label value='🤖 SOLO' fontSize={13} color={uiState.leaderboardTab === 'solo' ? C.textWhite : C.textMuted} font='sans-serif' />
+          </UiEntity>
+        </UiEntity>
       </UiEntity>
 
       {/* Content */}
@@ -215,49 +237,85 @@ const LeaderboardModal = () => (
           }}
           uiBackground={{ color: C.panelBg }}
         >
-          {uiState.leaderboard.length === 0 ? (
-            <Label
-              value='No squad records yet. Form a squad and climb to claim #1!'
-              fontSize={16}
-              color={C.textMuted}
-              font='sans-serif'
-              uiTransform={{ margin: { top: 16, bottom: 16 } }}
-            />
-          ) : (
-            uiState.leaderboard.slice(0, 6).map((entry, i) => {
-              const entryColor = i === 0 ? C.gold : i === 1 ? C.cyan : i === 2 ? C.orange : C.textWhite
-              const medalIcon =
-                i === 0
-                  ? 'assets/icons/crown.png'
-                  : i === 1 || i === 2
-                    ? 'assets/icons/medal.png'
-                    : 'assets/icons/user.png'
-
-              return (
-                <UiEntity
-                  key={`modal-lb-${i}`}
-                  uiTransform={{
-                    width: '100%',
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    padding: { top: 8, bottom: 8, left: 8, right: 8 }
-                  }}
-                  uiBackground={{ color: i % 2 === 1 ? Color4.create(0.08, 0.12, 0.22, 0.45) : C.transparent }}
-                >
-                  <UiEntity uiTransform={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Icon src={medalIcon} size={20} color={entryColor} margin={{ right: 10 }} />
-                    <Label value={`#${i + 1}  ${entry.displayName}`} fontSize={16} color={entryColor} font='sans-serif' />
+          {uiState.leaderboardTab === 'squad' ? (
+            uiState.leaderboard.length === 0 ? (
+              <Label
+                value='No squad records yet. Form a squad and climb to claim #1!'
+                fontSize={16}
+                color={C.textMuted}
+                font='sans-serif'
+                uiTransform={{ margin: { top: 16, bottom: 16 } }}
+              />
+            ) : (
+              uiState.leaderboard.slice(0, 6).map((entry, i) => {
+                const entryColor = i === 0 ? C.gold : i === 1 ? C.cyan : i === 2 ? C.orange : C.textWhite
+                const medalIcon =
+                  i === 0
+                    ? 'assets/icons/crown.png'
+                    : i === 1 || i === 2
+                      ? 'assets/icons/medal.png'
+                      : 'assets/icons/user.png'
+                return (
+                  <UiEntity
+                    key={`modal-lb-${i}`}
+                    uiTransform={{
+                      width: '100%',
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: { top: 8, bottom: 8, left: 8, right: 8 }
+                    }}
+                    uiBackground={{ color: i % 2 === 1 ? Color4.create(0.08, 0.12, 0.22, 0.45) : C.transparent }}
+                  >
+                    <UiEntity uiTransform={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <Icon src={medalIcon} size={20} color={entryColor} margin={{ right: 10 }} />
+                      <Label value={`#${i + 1}  ${entry.displayName}`} fontSize={16} color={entryColor} font='sans-serif' />
+                    </UiEntity>
+                    <Label
+                      value={`${entry.teamScore} PTS  (${entry.maxAltitude}M)`}
+                      fontSize={16}
+                      color={i === 0 ? C.gold : C.textDim}
+                      font='monospace'
+                    />
                   </UiEntity>
-                  <Label
-                    value={`${entry.teamScore} PTS  (${entry.maxAltitude}M)`}
-                    fontSize={16}
-                    color={i === 0 ? C.gold : C.textDim}
-                    font='monospace'
-                  />
-                </UiEntity>
-              )
-            })
+                )
+              })
+            )
+          ) : (
+            uiState.soloLeaderboard.length === 0 ? (
+              <Label
+                value='No solo records yet. Start a practice run to set the first!'
+                fontSize={16}
+                color={C.textMuted}
+                font='sans-serif'
+                uiTransform={{ margin: { top: 16, bottom: 16 } }}
+              />
+            ) : (
+              uiState.soloLeaderboard.slice(0, 6).map((entry, i) => {
+                const entryColor = i === 0 ? C.purple : i === 1 ? C.cyan : C.textWhite
+                return (
+                  <UiEntity
+                    key={`solo-lb-${i}`}
+                    uiTransform={{
+                      width: '100%',
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: { top: 8, bottom: 8, left: 8, right: 8 }
+                    }}
+                    uiBackground={{ color: i % 2 === 1 ? Color4.create(0.12, 0.06, 0.22, 0.45) : C.transparent }}
+                  >
+                    <Label value={`#${i + 1}  ${entry.displayName}`} fontSize={16} color={entryColor} font='sans-serif' />
+                    <Label
+                      value={`${entry.soloScore} PTS  (${entry.maxAltitude}M)`}
+                      fontSize={16}
+                      color={i === 0 ? C.purple : C.textDim}
+                      font='monospace'
+                    />
+                  </UiEntity>
+                )
+              })
+            )
           )}
         </UiEntity>
 
@@ -454,7 +512,7 @@ const LobbyScreen = () => {
             width: '100%',
             flexDirection: 'column',
             alignItems: 'center',
-            padding: { top: 22, bottom: 18, left: 20, right: 20 }
+            padding: { top: 20, bottom: 16, left: 20, right: 20 }
           }}
           uiBackground={{ color: C.cardHeader }}
         >
@@ -628,9 +686,9 @@ const LobbyScreen = () => {
             }}
           >
             {[
-              { icon: 'assets/icons/link.png', label: 'IRON CHAIN', idx: 0 },
-              { icon: 'assets/icons/rope.png', label: 'ROPE FIBER', idx: 1 },
-              { icon: 'assets/icons/sparkles.png', label: 'NEON BEAM', idx: 2 }
+              { icon: 'assets/icons/link.png', label: 'IRON CHAIN', idx: 0, swatch: Color4.create(0.65, 0.65, 0.65, 1) },
+              { icon: 'assets/icons/rope.png', label: 'ROPE FIBER', idx: 1, swatch: Color4.create(0.60, 0.38, 0.18, 1) },
+              { icon: 'assets/icons/sparkles.png', label: 'NEON BEAM', idx: 2, swatch: Color4.create(0.12, 0.85, 1.00, 1) }
             ].map((s) => (
               <UiEntity
                 key={`skin-${s.idx}`}
@@ -640,7 +698,7 @@ const LobbyScreen = () => {
                   flexDirection: 'row',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  padding: { left: 10, right: 10 }
+                  padding: { left: 8, right: 8 }
                 }}
                 uiBackground={{ color: uiState.selectedSkin === s.idx ? C.cyan : C.cyanDim }}
                 onMouseDown={() => {
@@ -649,11 +707,10 @@ const LobbyScreen = () => {
                   setChainSkin(s.idx)
                 }}
               >
-                <Icon
-                  src={s.icon}
-                  size={18}
-                  color={uiState.selectedSkin === s.idx ? C.insetBg : C.textWhite}
-                  margin={{ right: 8 }}
+                {/* Color swatch dot */}
+                <UiEntity
+                  uiTransform={{ width: 12, height: 12, margin: { right: 6 } }}
+                  uiBackground={{ color: s.swatch }}
                 />
                 <Label
                   value={s.label}
@@ -752,8 +809,14 @@ const LobbyScreen = () => {
                   uiState.musicEnabled = toggleBgMusic()
                 }}
               >
+                <Icon
+                  src={uiState.musicEnabled ? 'assets/icons/music.png' : 'assets/icons/music-off.png'}
+                  size={18}
+                  color={uiState.musicEnabled ? C.emerald : C.textMuted}
+                  margin={{ right: 6 }}
+                />
                 <Label
-                  value={uiState.musicEnabled ? '🎵 ON' : '🔇 OFF'}
+                  value={uiState.musicEnabled ? 'ON' : 'OFF'}
                   fontSize={13}
                   color={uiState.musicEnabled ? C.emerald : C.textMuted}
                   font='sans-serif'
@@ -890,7 +953,13 @@ const RunningHud = () => {
         <VDivider />
         <StatBox icon='assets/icons/mountain.png' label='ALTITUDE' value={`${gameState.currentAltitude} M`} color={C.cyan} isMono={true} />
         <VDivider />
-        <StatBox icon='assets/icons/flame.png' label='VOID GAP' value={`${lavaDist.toFixed(1)} M`} color={lavaNear ? C.red : C.purple} isMono={true} />
+        <StatBox
+          icon='assets/icons/flame.png'
+          label='VOID GAP'
+          value={`${lavaDist.toFixed(1)}m ↑${gameState.lavaSpeed.toFixed(2)}`}
+          color={lavaNear ? C.red : C.purple}
+          isMono={true}
+        />
         <VDivider />
         <StatBox icon='assets/icons/star.png' label='GEMS' value={`💎 ${gameState.gemsCollected || 0}`} color={C.emerald} isMono={true} />
         <VDivider />
@@ -1133,7 +1202,7 @@ const GameOverScreen = () => {
             )}
           </UiEntity>
 
-          {/* Action Buttons: Main Menu & Retry */}
+          {/* Action Buttons: Rematch / Retry & Main Menu */}
           <UiEntity
             uiTransform={{
               width: '100%',
@@ -1158,7 +1227,7 @@ const GameOverScreen = () => {
               <Label value='MAIN MENU' fontSize={17} color={C.textWhite} font='sans-serif' />
             </UiEntity>
 
-            {/* Retry Climb Button */}
+            {/* Rematch / Retry Button */}
             <UiEntity
               uiTransform={{
                 width: '48%',
@@ -1167,17 +1236,22 @@ const GameOverScreen = () => {
                 alignItems: 'center',
                 justifyContent: 'center'
               }}
-              uiBackground={{ color: C.cyan }}
+              uiBackground={{ color: isSolo ? C.purple : C.cyan }}
               onMouseDown={() => {
                 if (isSolo) {
                   startPractice()
                 } else {
-                  resetToLobby()
+                  rematchRun()
                 }
               }}
             >
               <Icon src='assets/icons/refresh-cw.png' size={20} color={C.insetBg} margin={{ right: 8 }} />
-              <Label value={isSolo ? 'RETRY SOLO' : 'RETRY SQUAD'} fontSize={17} color={C.insetBg} font='sans-serif' />
+              <Label
+                value={isSolo ? 'RETRY SOLO' : '⚡ REMATCH SQUAD'}
+                fontSize={17}
+                color={C.insetBg}
+                font='sans-serif'
+              />
             </UiEntity>
           </UiEntity>
         </UiEntity>

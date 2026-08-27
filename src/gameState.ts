@@ -11,13 +11,21 @@
 import { MessageBus } from '@dcl/sdk/message-bus'
 import { EngineInfo, engine, Transform, InputModifier } from '@dcl/sdk/ecs'
 import { movePlayerTo, triggerEmote } from '~system/RestrictedActions'
-import { resetPlatformPool, resetLavaPosition } from './course'
+import { resetPlatformPool, resetLavaPosition, setLavaVisible } from './course'
 import { createPracticeBot, destroyPracticeBot } from './practiceBot'
 import { playTickSound, playGoSound, playVoidFallSound, playMilestoneSound } from './audio'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type GamePhase = 'LOBBY' | 'COUNTDOWN' | 'RUNNING' | 'FINISHED' | 'GAME_OVER' | 'PRACTICE'
+
+export interface SoloLeaderboardEntry {
+  displayName: string
+  playerId: string
+  soloScore: number
+  maxAltitude: number
+  formattedTime: string
+}
 
 export interface RemotePlayer {
   id: string
@@ -96,6 +104,9 @@ export const gameState = {
   // Leaderboard (co-op squads)
   leaderboard: [] as LeaderboardEntry[],
 
+  // Solo practice leaderboard (session-only)
+  soloLeaderboard: [] as SoloLeaderboardEntry[],
+
   // Countdown state
   countdownValue: 3,
 
@@ -107,6 +118,7 @@ export const gameState = {
   // Callbacks (set by UI)
   onPhaseChange: null as ((phase: GamePhase) => void) | null,
   onLeaderboardUpdate: null as ((board: LeaderboardEntry[]) => void) | null,
+  onSoloLeaderboardUpdate: null as ((board: SoloLeaderboardEntry[]) => void) | null,
   onCountdownTick: null as ((n: number) => void) | null,
   onYankReceived: null as (() => void) | null,
   onSquadUpdate: null as (() => void) | null
@@ -246,6 +258,7 @@ bus.on('cm:phase', (data: PhaseMsg) => {
     lockedSpawnPos = null
     gameState.runStartRuntime = data.startRuntime
     resetClimbState()
+    setLavaVisible(true)
   }
   gameState.onPhaseChange?.(data.phase)
 })
@@ -436,6 +449,7 @@ export function updateGameState(dt: number) {
         gameState.phase = 'RUNNING'
         updateControlsForPhase('RUNNING')
         lockedSpawnPos = null
+        setLavaVisible(true)
         const engineInfo = EngineInfo.getOrNull(engine.RootEntity)
         gameState.runStartRuntime = engineInfo ? engineInfo.totalRuntime : 0
         resetClimbState()
@@ -490,20 +504,24 @@ export function updateGameState(dt: number) {
     gameState.lavaSpeed = gameState.lavaBaseSpeed + (gameState.maxAltitude / 100) * 0.08
     gameState.lavaHeight += dt * gameState.lavaSpeed
 
-    // Continuous Score
+    // Continuous Score — altitude + time + gems (gems must be additive, not overwritten)
     const timeSec = Math.floor(gameState.currentElapsedMs / 1000)
-    gameState.teamScore = Math.floor(gameState.maxAltitude * 100 + timeSec * 10)
+    gameState.teamScore = Math.floor(
+      gameState.maxAltitude * 100 + timeSec * 10 + gameState.gemsCollected * 250
+    )
     if (gameState.teamScore > gameState.highScore) {
       gameState.highScore = gameState.teamScore
     }
   }
 
-  // Prune stale remote players (gone for >60s)
+  // Prune stale remote players (15s for non-partners, 30s for active partner)
   const now = Date.now()
   for (const [id, player] of gameState.remotePlayers) {
-    if (now - player.lastSeen > 60_000) {
+    const isPartner = gameState.partnerId === id
+    const timeout = isPartner ? 30_000 : 15_000
+    if (now - player.lastSeen > timeout) {
       gameState.remotePlayers.delete(id)
-      if (gameState.partnerId === id && gameState.phase === 'LOBBY') {
+      if (isPartner && gameState.phase === 'LOBBY') {
         gameState.partnerId = ''
         gameState.partnerName = ''
         gameState.outgoingInviteTo = null
@@ -537,8 +555,9 @@ export function triggerGameOver() {
   }).catch(() => { })
 
   if (wasPractice) {
-    // Solo practice run — clean up bot, no leaderboard entry, no broadcast
+    // Solo practice run — save to solo leaderboard, clean up bot, no broadcast
     destroyPracticeBot()
+    addSoloToLeaderboard(gameState.localName, gameState.teamScore, gameState.maxAltitude, gameState.currentElapsedMs)
   } else {
     // Co-op run — add to team leaderboard and broadcast
     const partnerName = gameState.partnerName || 'Partner'
@@ -591,6 +610,37 @@ export function resetToLobby() {
   gameState.onPhaseChange?.('LOBBY')
 }
 
+/**
+ * Rematch — re-uses the current squad link for an immediate COUNTDOWN.
+ * Only valid from GAME_OVER phase when a co-op partner is still linked.
+ */
+export function rematchRun() {
+  if (gameState.phase !== 'GAME_OVER') return
+  if (!gameState.partnerId || gameState.partnerId === '__SOLO__') return
+
+  gameState.isPracticeMode = false
+  gameState.phase = 'COUNTDOWN'
+  updateControlsForPhase('COUNTDOWN')
+  gameState.countdownValue = 3
+  countdownTimer = 0
+  resetClimbState()
+  gameState.onPhaseChange?.('COUNTDOWN')
+  gameState.onCountdownTick?.(3)
+
+  bus.emit('cm:phase', {
+    phase: 'COUNTDOWN',
+    startRuntime: 0,
+    teamId: getTeamId()
+  } as PhaseMsg)
+
+  const slot = getLaunchpadSlot()
+  lockedSpawnPos = slot
+  movePlayerTo({
+    newRelativePosition: slot,
+    cameraTarget: { x: slot.x, y: 5.0, z: 10.0 }
+  }).catch(() => { })
+}
+
 function resetClimbState() {
   gameState.currentElapsedMs = 0
   gameState.teamScore = 0
@@ -612,12 +662,14 @@ export function broadcastYank(targetId: string) {
 }
 
 function addTeamToLeaderboard(player1: string, player2: string, teamScore: number, maxAltitude: number, timeMs: number) {
+  // Use sorted player IDs as a deterministic team key (avoids name-string duplicates)
+  const teamKey = [gameState.localId, gameState.partnerId].sort().join(':')
   const teamLabel = `${player1} & ${player2}`
-  const existing = gameState.leaderboard.findIndex(e => e.displayName === teamLabel)
+  const existing = gameState.leaderboard.findIndex(e => e.playerId === teamKey)
   const entry: LeaderboardEntry = {
     displayName: teamLabel,
     partnerName: player2,
-    playerId: gameState.localId,
+    playerId: teamKey,
     teamScore,
     maxAltitude,
     formattedTime: formatTime(timeMs)
@@ -635,6 +687,29 @@ function addTeamToLeaderboard(player1: string, player2: string, teamScore: numbe
   gameState.leaderboard.sort((a, b) => b.teamScore - a.teamScore)
   if (gameState.leaderboard.length > 10) gameState.leaderboard.length = 10
   gameState.onLeaderboardUpdate?.(gameState.leaderboard)
+}
+
+function addSoloToLeaderboard(displayName: string, soloScore: number, maxAltitude: number, timeMs: number) {
+  const existing = gameState.soloLeaderboard.findIndex(e => e.playerId === gameState.localId)
+  const entry: SoloLeaderboardEntry = {
+    displayName,
+    playerId: gameState.localId,
+    soloScore,
+    maxAltitude,
+    formattedTime: formatTime(timeMs)
+  }
+
+  if (existing >= 0) {
+    if (soloScore > gameState.soloLeaderboard[existing].soloScore) {
+      gameState.soloLeaderboard[existing] = entry
+    }
+  } else {
+    gameState.soloLeaderboard.push(entry)
+  }
+
+  gameState.soloLeaderboard.sort((a, b) => b.soloScore - a.soloScore)
+  if (gameState.soloLeaderboard.length > 10) gameState.soloLeaderboard.length = 10
+  gameState.onSoloLeaderboardUpdate?.(gameState.soloLeaderboard)
 }
 
 export function formatTime(ms: number): string {
