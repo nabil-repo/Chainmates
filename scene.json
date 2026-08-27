@@ -3,7 +3,7 @@
   "runtimeVersion": "7",
   "display": {
     "title": "Chainmates",
-    "description": "⛓ Co-op tether climbing game. Two players bound by an elastic chain must cooperate to escape the rising Electric Void Abyss.",
+    "description": "⛓️ The ultimate mobile-first co-op climb! Bound by an elastic 4m tether, two players must jump, balance, and cooperate across shifting kinetic platforms to escape the rising Electric Void Abyss. Team up with a partner or scale the heights with the AI companion to claim #1 on the global leaderboard!",
     "favicon": "assets/logo.png",
     "navmapThumbnail": "assets/images/thumbnail.png"
   },
