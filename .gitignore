@@ -37,3 +37,7 @@ Thumbs.db
 .env.*.local
 
 generate_icons.ps1
+
+# AI Agents & Skills
+.agents/
+skills-lock.json
