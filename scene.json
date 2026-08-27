@@ -14,7 +14,8 @@
   },
   "main": "bin/index.js",
   "tags": [
-    "game"
+    "game",
+    "social"
   ],
   "scene": {
     "parcels": [
@@ -64,12 +65,12 @@
   },
   "creator": "0x1bf70d598f0e539ac7169a218f3ae34c7af3b3bb",
   "skyboxConfig": {
-    "fixedTime": 77400
+    "fixedTime": 0
   },
   "worldConfiguration": {
     "name": "chainmates.dcl.eth",
     "skyboxConfig": {
-      "fixedTime": 77400
+      "fixedTime": 0
     }
   },
   "landscapeTerrain": false,

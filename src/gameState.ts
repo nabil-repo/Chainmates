@@ -212,7 +212,8 @@ export function updateControlsForPhase(phase: GamePhase) {
         disableJog: false,
         disableRun: false,
         disableJump: false,
-        disableEmote: false
+        disableEmote: false,
+        disableGliding: true
       })
     })
   } else {
@@ -223,7 +224,8 @@ export function updateControlsForPhase(phase: GamePhase) {
         disableJog: true,
         disableRun: true,
         disableJump: true,
-        disableEmote: true
+        disableEmote: true,
+        disableGliding: true
       })
     })
   }

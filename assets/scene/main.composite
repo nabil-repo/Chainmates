@@ -457,7 +457,8 @@
             "thumbnail": "assets/images/thumbnail.png",
             "ageRating": "A",
             "categories": [
-              "game"
+              "game",
+              "social"
             ],
             "author": "Nabil",
             "email": "nabil.aaaman@gmail.com",

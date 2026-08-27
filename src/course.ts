@@ -16,9 +16,17 @@ import {
   TextureWrapMode,
   TextureFilterMode,
   VisibilityComponent,
-  MaterialTransparencyMode
+  MaterialTransparencyMode,
+  Tween,
+  TextureMovementType,
+  ParticleSystem,
+  PBParticleSystem_BlendMode,
+  PBParticleSystem_SimulationSpace,
+  CameraModeArea,
+  CameraType,
+  SkyboxTime
 } from '@dcl/sdk/ecs'
-import { Vector3, Color4, Quaternion } from '@dcl/sdk/math'
+import { Vector3, Color4, Quaternion, Vector2 } from '@dcl/sdk/math'
 import { MovingPlatform } from './components'
 import { gameState } from './gameState'
 import { build3DLeaderboard } from './lobbyLeaderboard'
@@ -216,6 +224,20 @@ export function buildCourse() {
   buildStartIsland()
   buildInfinitePlatformPool()
   build3DLeaderboard()
+
+  // 6. Mobile 3rd-Person Camera Enforcement Zone
+  // Ensures mobile touch climbers retain optimal 3rd-person spatial awareness of partner and jumps
+  const cameraZone = engine.addEntity()
+  Transform.create(cameraZone, { position: Vector3.create(8.0, 150.0, 8.0) })
+  CameraModeArea.create(cameraZone, {
+    area: Vector3.create(16.0, 300.0, 16.0),
+    mode: CameraType.CT_THIRD_PERSON
+  })
+
+  // 7. Fixed Midnight Skybox (deep cyber void atmosphere)
+  SkyboxTime.createOrReplace(engine.RootEntity, {
+    fixedTime: 0
+  })
 }
 
 // ─── Rising Electric Void Abyss & Perimeter Containment ───────────────────────
@@ -291,12 +313,45 @@ function buildMoltenLavaAbyss() {
       filterMode: TextureFilterMode.TFM_TRILINEAR
     }),
     emissiveColor: Color4.create(0.85, 0.40, 1.00, 1), // glowing electric violet pulse
-    emissiveIntensity: 2.2,
+    emissiveIntensity: 2.5,
     metallic: 0.0,
     roughness: 1.0
   })
+
+  // Continuous churning electric energy surface UV animation (GPU-evaluated)
+  Tween.setTextureMoveContinuous(
+    lavaEntity,
+    Vector2.create(0.06, 0.03),
+    0.12,
+    TextureMovementType.TMT_OFFSET
+  )
+
+  // Mobile-safe rising plasma embers (capped to 35 live particles for 60fps on Android)
+  ParticleSystem.create(lavaEntity, {
+    active: true,
+    rate: 18,
+    maxParticles: 35,
+    lifetime: 1.8,
+    gravity: -0.75, // Float upward
+    shape: ParticleSystem.Shape.Box({ size: Vector3.create(14, 0.1, 14) }),
+    initialSize: { start: 0.12, end: 0.28 },
+    initialColor: { start: Color4.create(0.85, 0.2, 1.0, 0.85), end: Color4.create(0.2, 0.85, 1.0, 0.85) },
+    colorOverTime: { start: Color4.create(1, 0.4, 0.9, 1), end: Color4.create(0.1, 0.2, 0.8, 0) },
+    blendMode: PBParticleSystem_BlendMode.PSB_ADD,
+    simulationSpace: PBParticleSystem_SimulationSpace.PSS_WORLD
+  })
+
   // Hidden until a run starts
   VisibilityComponent.create(lavaEntity, { visible: false })
+}
+
+/**
+ * Keeps skybox fixed to deep midnight void (fixedTime: 0 / 12:00 AM)
+ */
+export function updateAltitudeSkybox(_altitude?: number) {
+  SkyboxTime.createOrReplace(engine.RootEntity, {
+    fixedTime: 0
+  })
 }
 
 export const fogEntities: ReturnType<typeof engine.addEntity>[] = []
@@ -478,6 +533,9 @@ function buildInfinitePlatformPool() {
     })
     const hasGem = i !== 0 && (i % 2 === 1)
     VisibilityComponent.create(gem, { visible: hasGem })
+
+    // Native continuous gem rotation (evaluated by client engine, 0 CPU overhead)
+    Tween.setRotateContinuous(gem, Quaternion.fromEulerDegrees(0, 1, 0), 75)
 
     // Vertical Left-to-Right Moving Hazard Cylinder Obstacle (Visual + Programmatic Zap)
     const obstacle = engine.addEntity()

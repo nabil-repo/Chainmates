@@ -6,7 +6,7 @@
  *  - Kinetic moving platform oscillations (with neon trim sync)
  */
 
-import { engine, Transform, TextShape, Material, VisibilityComponent, MeshCollider } from '@dcl/sdk/ecs'
+import { engine, Transform, TextShape, Material, VisibilityComponent, MeshCollider, Physics, KnockbackFalloff, ParticleSystem, PBParticleSystem_BlendMode } from '@dcl/sdk/ecs'
 import { Vector3, Quaternion, Color4 } from '@dcl/sdk/math'
 import { MovingPlatform } from './components'
 import { gameState } from './gameState'
@@ -19,10 +19,10 @@ import {
   SPIRAL_POINTS,
   repositionTrim,
   getAltitudeBiomeColor,
+  updateAltitudeSkybox,
   COL_FLOATING_STONE
 } from './course'
 import { playGemSound, playYankSound } from './audio'
-import { movePlayerTo } from '~system/RestrictedActions'
 import { setUiYankFlash } from './ui'
 
 /** Recycles lower platforms above the players as they climb higher into the sky */
@@ -113,37 +113,49 @@ export function endlessPlatformRecycleSystem(_dt: number) {
 let gemRotation = 0
 
 /** Rotates floating gems and detects player collision/collection */
-export function gemCollectionSystem(dt: number) {
+export function gemCollectionSystem(_dt: number) {
   if (gameState.phase !== 'RUNNING' && gameState.phase !== 'PRACTICE') return
 
   const localTransform = Transform.getOrNull(engine.PlayerEntity)
   if (!localTransform) return
 
-  gemRotation += dt * 3.0
-  const rotQuat = Quaternion.fromEulerDegrees(45, (gemRotation * 180) / Math.PI, 0)
   const playerPos = localTransform.position
 
   for (const p of platformPool) {
     if (!p.hasGem) continue
 
-    const gemTransform = Transform.getMutable(p.gemEntity)
-    gemTransform.rotation = rotQuat
+    const gemTransform = Transform.get(p.gemEntity)
 
     // Check distance between player and gem
     const distSq = Vector3.distanceSquared(playerPos, gemTransform.position)
     if (distSq < 2.56) { // 1.6m radius
       p.hasGem = false
-      VisibilityComponent.createOrReplace(p.gemEntity, { visible: false })
       playGemSound()
       gameState.teamScore += 250
       gameState.gemsCollected = (gameState.gemsCollected || 0) + 1
+
+      // 1-shot particle celebration burst (+250 PTS)
+      ParticleSystem.createOrReplace(p.gemEntity, {
+        active: true,
+        loop: false,
+        rate: 0,
+        bursts: { values: [{ count: 20, time: 0 }] },
+        lifetime: 0.55,
+        initialVelocitySpeed: { start: 2.0, end: 4.5 },
+        shape: ParticleSystem.Shape.Sphere({ radius: 0.25 }),
+        initialColor: { start: Color4.create(1, 0.85, 0.1, 1), end: Color4.create(0.2, 1, 0.6, 1) },
+        colorOverTime: { start: Color4.create(1, 1, 1, 1), end: Color4.create(1, 0.8, 0, 0) },
+        blendMode: PBParticleSystem_BlendMode.PSB_ADD
+      })
+
+      VisibilityComponent.createOrReplace(p.gemEntity, { visible: false })
     }
   }
 }
 
 let globalElapsed = 0
 
-/** Updates rising molten lava position */
+/** Updates rising molten lava position & synchronizes altitude skybox */
 export function lavaSystem(_dt: number) {
   if (!lavaEntity) return
   // Only update lava transform during active runs (prevents unnecessary idle CRDT puts)
@@ -151,6 +163,9 @@ export function lavaSystem(_dt: number) {
 
   const transform = Transform.getMutable(lavaEntity)
   transform.position = Vector3.create(8.0, gameState.lavaHeight, 8.0)
+
+  // Dynamically shift skybox atmosphere based on current max altitude climbed
+  updateAltitudeSkybox(gameState.maxAltitude)
 }
 
 /** Oscillates all MovingPlatform entities back and forth on the X-axis,
@@ -236,18 +251,12 @@ export function hazardObstacleSystem(dt: number) {
           playYankSound()
           setUiYankFlash(true)
 
-          // Nudge player away horizontally
-          const dist = Math.max(0.1, Math.sqrt(distSq))
-          const pushDirX = dx / dist
-          const pushDirZ = dz / dist
-
-          movePlayerTo({
-            newRelativePosition: {
-              x: Math.max(1.0, Math.min(15.0, playerPos.x + pushDirX * 1.1)),
-              y: playerPos.y,
-              z: Math.max(1.0, Math.min(15.0, playerPos.z + pushDirZ * 1.1))
-            }
-          }).catch(() => { })
+          Physics.applyKnockbackToPlayer(
+            Vector3.create(obsX, obsY, obsZ),
+            9.0,
+            2.0,
+            KnockbackFalloff.LINEAR
+          )
         }
       }
     }

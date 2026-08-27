@@ -12,8 +12,7 @@
  *  - ui: React-DCL overlay UI
  */
 
-import { } from '@dcl/sdk/math'
-import { engine, executeTask, EngineInfo } from '@dcl/sdk/ecs'
+import { engine, executeTask, EngineInfo, AssetLoad } from '@dcl/sdk/ecs'
 
 import {
   gameState,
@@ -108,6 +107,17 @@ export function main() {
   setupHud()
   setupUi()
   updateControlsForPhase('LOBBY')
+
+  // Preload companion 3D model and core textures for zero-stutter Android mobile experience
+  AssetLoad.createOrReplace(engine.RootEntity, {
+    assets: [
+      'assets/asset-packs/ball_droid/Droid_01/Droid_01.glb',
+      'assets/textures/void.jpg',
+      'assets/textures/Chain.png',
+      'assets/textures/Rope.png',
+      'assets/textures/Neon.png'
+    ]
+  })
 
   // 4. Warm up Render server & load persistent leaderboard & start music
   warmupServer()
