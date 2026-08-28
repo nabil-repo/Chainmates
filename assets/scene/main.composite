@@ -462,9 +462,7 @@
             ],
             "author": "Nabil",
             "email": "nabil.aaaman@gmail.com",
-            "tags": [
-              ""
-            ],
+            "tags": [],
             "layout": {
               "base": {
                 "x": 0,
@@ -490,8 +488,11 @@
                     ]
                   },
                   "y": {
-                    "$case": "single",
-                    "value": 1.600000023841858
+                    "$case": "range",
+                    "value": [
+                      1.600000023841858,
+                      1.600000023841858
+                    ]
                   },
                   "z": {
                     "$case": "range",
@@ -508,10 +509,8 @@
                 }
               }
             ],
-            "skyboxConfig": {
-              "fixedTime": 77400
-            },
-            "creator": "0x1bf70d598f0e539ac7169a218f3ae34c7af3b3bb",
+            "skyboxConfig": {},
+            "creator": "0xad0d520fdae7b1ed9a41d2078dbf75a9c5b55129",
             "hideLandscapeTerrain": true
           }
         }
