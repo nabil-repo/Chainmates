@@ -1,4 +1,4 @@
-<p align="center">
+﻿<p align="center">
   <img src="assets/logo.png" alt="Chainmates Logo" width="220" />
 </p>
 
@@ -16,20 +16,21 @@
   <img src="https://img.shields.io/badge/Multiplayer-DCL%20MessageBus-b400ff?style=for-the-badge" alt="Multiplayer"/>
   <img src="https://img.shields.io/badge/License-MIT-ffd700?style=for-the-badge" alt="MIT License"/>
 </p>
-
----
-
 ## 📑 Table of Contents
 
 - [🌟 Project Overview](#-project-overview)
 - [🏆 What Makes Chainmates Unique](#-what-makes-chainmates-unique)
+- [🏛️ Interactive Lobby & Squad Matchmaking](#️-interactive-lobby--squad-matchmaking)
+- [♾️ Endless Procedural Course & Infinite Recycling](#️-endless-procedural-course--infinite-recycling)
+- [⚡ Dynamic Obstacle Course & Kinetic Hazards](#-dynamic-obstacle-course--kinetic-hazards)
+- [📱 Optimal Performance for Mobile Devices (60 FPS)](#-optimal-performance-for-mobile-devices-60-fps)
+- [🛡️ Anti-Cheat & Authoritative Server Leaderboard](#️-anti-cheat--authoritative-server-leaderboard)
 - [🎮 Core Game Mechanics](#-core-game-mechanics)
   - [1. Dynamic 4.0m Elastic Tether](#1-dynamic-40m-elastic-tether)
   - [2. Solo Practice Mode & AI Ball Droid](#2-solo-practice-mode--ai-ball-droid)
   - [3. The Rising Electric Void Abyss](#3-the-rising-electric-void-abyss)
-  - [4. Infinite Procedural Platform Recycling](#4-infinite-procedural-platform-recycling)
-  - [5. Cyber-Gems & Continuous Scoring Engine](#5-cyber-gems--continuous-scoring-engine)
-  - [6. Rapid Rematch Loop](#6-rapid-rematch-loop)
+  - [4. Cyber-Gems & Continuous Scoring Engine](#4-cyber-gems--continuous-scoring-engine)
+  - [5. Rapid Rematch Loop](#5-rapid-rematch-loop)
 - [📱 Mobile-First UX & Ergonomics](#-mobile-first-ux--ergonomics)
 - [🕹️ Controls Reference](#️-controls-reference)
 - [🏗️ System Architecture](#️-system-architecture)
@@ -56,7 +57,7 @@ For solo players and hackathon judges testing independently, Chainmates includes
 
 ```
    [ Squad Lounge ] ───(Link Partner or AI Droid)───► [ 3-2-1 Countdown ]
-                                                              │
+                                                               │
    [ Global High Scores ] ◄──(Fall / Game Over) ◄─── [ Endless Kinetic Climb ]
 ```
 
@@ -64,16 +65,17 @@ For solo players and hackathon judges testing independently, Chainmates includes
 
 ## 🏆 What Makes Chainmates Unique (The Competitive Edge)
 
-Unlike traditional metaverse mini-games that rely on static obstacle courses or "parallel play" (where players merely run in the same room without affecting each other), **Chainmates introduces six breakthrough innovations**:
+Unlike traditional metaverse mini-games that rely on static obstacle courses or "parallel play" (where players merely run in the same room without affecting each other), **Chainmates introduces seven breakthrough innovations**:
 
 | # | Breakthrough Feature | Why It's Unique & Game-Changing |
 |---|---|---|
-| 1️⃣ | **True Physical Interdependence (The Tether)** | Avatars are physically bound by an elastic 4.0m tether with **3 live tension states** (Slack, Taut, Yanked). If one player overextends or slips, genuine elastic physics tugs both climbers. Co-op isn't optional—it's physical reality. |
-| 2️⃣ | **Autonomous AI Ball Droid Companion** | Solves the #1 flaw of multiplayer hackathon entries: *unplayability when tested solo*. With 1 tap, an autonomous 3D hover droid binds to the player, simulating authentic partner drag, strain, and rescue mechanics. |
-| 3️⃣ | **Infinite Procedural Ascent with 8 Kinetic Biomes** | Rather than a fixed, one-and-done parkour course, platforms continuously recycle ahead of players with sinusoidal horizontal oscillations, randomized phases, and shifting neon palettes across 8 altitude tiers. |
-| 4️⃣ | **Escalating Electric Void Abyss** | Instead of passive timers, a glowing sea of electric energy accelerates upward dynamically based on altitude ($0.15 + \frac{\text{Alt}}{100} \times 0.08\text{ m/s}$), creating relentless, adrenaline-fueled pacing. |
-| 5️⃣ | **Mobile-First Ergonomics & HUD Radar** | Tailored specifically for touch screens: virtual-joystick clearance, 48–58px touch targets, Lucide vector icons, and an on-screen **Void Gap & Tension Radar** for instant situational awareness. |
-| 6️⃣ | **Live Authoritative Dual Backend** | Live Node.js/Express service on Render featuring cryptographically verified Duo (`PlayerA + PlayerB`) and Solo leaderboards with keep-alive heartbeats and offline resilience. |
+| 1️⃣ | **🏛️ Interactive Lobby & Matchmaking** | Dynamic player discovery, 1-tap squad invite/accept handshake over DCL MessageBus, isolated squad channels, and 3D in-world holographic leaderboards. |
+| 2️⃣ | **♾️ Endless Procedural Recycling** | An infinite vertical obstacle course using zero-memory-leak entity pooling that dynamically teleports recycled platforms ahead of climbers. |
+| 3️⃣ | **⚡ Dynamic Kinetic Obstacle Course** | Sinusoidal oscillating platforms, rotating hazard cylinders, and a dynamic accelerating Electric Void Abyss. |
+| 4️⃣ | **📱 60 FPS Mobile Optimization** | Pre-allocated entity pooling, PBR material caching, 10 FPS lerped proxy syncing, and touch-first ergonomics with virtual joystick clearance. |
+| 5️⃣ | **🛡️ Anti-Cheat Authoritative Leaderboard** | High-availability Render REST backend with IP rate-limiting, mathematical sanity validation, strict duo vs solo score segregation, and offline resilience. |
+| 6️⃣ | **🤝 True Physical Interdependence** | Avatars bound by a 4.0m elastic tether with **3 live tension states** (Slack, Taut, Yanked) applying real elastic momentum impulses. |
+| 7️⃣ | **🤖 Autonomous AI Ball Droid Companion** | Solves the #1 flaw of multiplayer hackathon entries: *unplayability when tested solo*. With 1 tap, an autonomous hover droid binds to you. |
 
 ### 📊 Direct Comparison: Chainmates vs. Typical Metaverse Experiences
 
@@ -82,14 +84,83 @@ Unlike traditional metaverse mini-games that rely on static obstacle courses or 
 │ Feature / Dimension       │ Typical DCL Course / Competitors  │ Chainmates (Our Scene)             │
 ├───────────────────────────┼───────────────────────────────────┼────────────────────────────────────┤
 │ 🤝 Co-Op Mechanics        │ Parallel play / static rope link  │ Dynamic Elastic Physics & Tension  │
+│ 🏛️ Lobby & Matchmaking    │ Manual coordination / no lobby    │ 1-Tap Squad Handshake & 3D Podium  │
 │ 🤖 Solo / Judge Testing   │ ❌ Broken / Unplayable alone      │ ✅ 1-Tap Autonomous AI Companion   │
-│ 🏗️ Level Structure        │ Static fixed obstacle layout      │ Infinite Procedural Recycling Pool │
+│ ♾️ Level Structure        │ Static fixed obstacle layout      │ Infinite Procedural Recycling Pool │
 │ ⚡ Hazard & Tension       │ Static countdown timer / none     │ Dynamic Rising Electric Void Abyss │
 │ 🌈 Visual Progression     │ Single environment theme          │ 8 Dynamic Altitude Neon Biomes     │
-│ 📱 Mobile UX Design       │ Desktop UI ported to mobile       │ Touch-first Insets, Radars & Icons │
-│ 🏆 Persistence & Backend  │ In-scene volatile memory          │ Live Render REST API Leaderboard   │
+│ 📱 Mobile Optimization    │ Desktop UI ported to mobile       │ 60 FPS PBR Cache, Insets & Radars  │
+│ 🛡️ Anti-Cheat & Backend   │ In-scene volatile memory / unauth │ Anti-Cheat Render REST Leaderboard │
 └───────────────────────────┴───────────────────────────────────┴────────────────────────────────────┘
 ```
+
+---
+
+## 🏛️ Interactive Lobby & Squad Matchmaking
+
+Chainmates features a seamless, frictionless social lobby engineered for instant multiplayer discovery and zero-hassle pairing:
+
+- **📡 Automatic Player Discovery:** On entering the parcel lounge, the lobby UI displays all active players currently in the scene with real-time ping and availability status.
+- **🤝 1-Tap Squad Handshake:** Players can send or accept tether invitations with a single tap. A decentralized two-way handshake over `DCL MessageBus` pairs the squad, locks in their session, and spawns the physical tether.
+- **🔒 Isolated Squad Channels (`teamId`):** Multiple squads can pair up and climb simultaneously in the same parcel without interference. Message payloads are deterministically keyed to the squad's unique channel.
+- **🎨 In-Lobby Customization Lounge:** Players can preview and select between 3 visual tether skins (Steel Chain, Braided Hemp, Neon Laser) with real-time swatch feedback before launching.
+- **🏆 3D Holographic Leaderboard Podium:** An in-world floating 3D holographic leaderboard is stationed directly in the lobby lounge, showcasing the top global Squad and Solo records fetched live from the backend.
+
+---
+
+## ♾️ Endless Procedural Course & Infinite Recycling
+
+Rather than a static parkour course that ends after a few jumps, Chainmates features an **infinite vertical ascent engine**:
+
+- **🔄 Zero-Leak Dynamic Platform Recycling:** A pre-allocated entity pool of spiral platforms continuously teleports ahead of players as they climb. Platforms below the climbers are recycled above them, guaranteeing infinite ascent without ever exhausting parcel memory.
+- **🌈 8 Dynamic Altitude Biomes:** Platforms transition through 8 progressive neon trim palettes as squads reach higher altitudes:
+  `Cyber Cyan (0-20m)` ➔ `Radiant Violet (20-40m)` ➔ `Electric Magenta (40-60m)` ➔ `Hyper Gold (60-80m)` ➔ `Emerald Matrix (80-100m)` ➔ `Solar Amber (100-120m)` ➔ `Quantum Indigo (120-140m)` ➔ `Ultra Plasma (140m+)`.
+- **🌌 Altitude Skybox & Lighting Synchronization:** Real-time emissive intensity and skybox hues shift dynamically as climbers reach upper atmospheric tiers.
+
+---
+
+## ⚡ Dynamic Obstacle Course & Kinetic Hazards
+
+Every climb is dynamic, unpredictable, and exciting:
+
+- **〰️ Sinusoidal Kinetic Platforms:** Floating platforms swing horizontally on the X-axis using smooth sinusoidal oscillations with randomized initial phase offsets, preventing repetitive movement patterns.
+- **⚠️ Procedural Hazard Cylinders:** Rotating vertical hazard barriers spawn dynamically on platforms (50% probability), requiring squads to time their jumps in perfect synchronization.
+- **⚡ Escalating Electric Void Abyss:** A surging ocean of electric plasma rises relentlessly from the tower base. Its velocity escalates dynamically based on squad altitude:
+  $$\text{Ascent Velocity} = 0.15 + \left(\frac{\text{Altitude}}{100}\right) \times 0.08\text{ m/s}$$
+- **💎 Cyber-Gems Scoring:** Floating collectible gems (+250 PTS) spawn on platforms, creating risk-reward choices where squads can push for risky jumps to boost their score.
+
+---
+
+## 📱 Optimal Performance for Mobile Devices (60 FPS)
+
+Chainmates is architected to achieve rock-solid **60 FPS** performance on mobile devices running the Decentraland Mobile client:
+
+- **🚀 PBR Material & Texture Caching:** Materials, textures, and shader states are pre-compiled and reused, eliminating runtime GPU stalls and garbage-collection frame drops.
+- **📡 10 FPS Interpolated Network Proxies:** Partner position updates are broadcasted at a lightweight 10 FPS and smoothly lerped client-side, reducing network overhead by 80% while preserving silky-smooth visual tracking.
+- **🛡️ 80m Perimeter Forcefield Containment:** Invisible collision forcefields encircle the 16×16m parcel boundary, preventing avatars from falling out of bounds and eliminating off-parcel rendering lag.
+- **📱 Touchscreen Ergonomics (`screenInset: 'interactable'`):** All HUD elements are positioned with safe zone margins to prevent overlap with native on-screen virtual joysticks, jump buttons, and phone notches.
+- **🎯 48–58px Touch Targets:** Every interactive UI button adheres to mobile accessibility standards with large hit targets and 25 Lucide outline vector icons.
+
+---
+
+## 🛡️ Anti-Cheat & Authoritative Server Leaderboard
+
+To ensure high-score integrity and prevent fraudulent client-side tampering, Chainmates operates an **authoritative Node.js/Express backend service on Render** with multi-layer security and anti-cheat validation:
+
+- **🔒 Multi-Tier Rate Limiting (`express-rate-limit` & `helmet`):**
+  - **Score Submission Limiter:** Maximum 6 score submissions per minute per IP address.
+  - **Leaderboard Query Limiter:** Maximum 60 fetches per minute per IP to prevent DDoS/scraping.
+  - **Global Burst Guard:** 120 requests per 15-minute window with `trust proxy` client-IP validation.
+- **🧮 Mathematical Sanity & Bounds Checks:**
+  - The server verifies submitted scores against maximum possible survival time, altitude reach, and gem density ($\text{Score} \approx \text{Alt} \times 100 + \text{Time} \times 10 + \text{Gems} \times 250$).
+  - Negative values, impossible instantaneous altitude jumps, and spoofed metrics are automatically dropped.
+- **👥 Strict Co-Op Duo vs. Solo Segregation:**
+  - Ensures co-op leaderboards remain 100% authentic: solo AI companion practice runs are identified and segregated so only verified two-player human squads rank on the global Duo board.
+- **🧹 Sanitization & XSS Prevention:**
+  - Player display names and team strings are trimmed, length-capped (36 chars max), and strictly sanitized before disk persistence.
+- **⚡ 24/7 Availability & Offline Auto-Sync Queue:**
+  - **Zero Cold-Starts:** Automated background warmup on scene load plus 5-minute health check pings (`GET /health`).
+  - **Offline Fault Tolerance:** If internet connectivity fluctuates, completed scores are optimistically cached client-side and automatically flushed to the server upon reconnection.
 
 ---
 
@@ -101,7 +172,7 @@ Unlike traditional metaverse mini-games that rely on static obstacle courses or 
   - 🟢 **SLACK (`< 3.0m`)**: Ample slack. Full freedom of movement.
   - 🟡 **TAUT (`3.0m – 4.0m`)**: Tension warning. Players feel resistance.
   - 🔴 **YANKED (`> 4.0m`)**: Overstretched! Elastic impulse kicks in via `movePlayerTo`, pulling overextended players back toward their partner with visual warning flashes and audio cues.
-- **Customizable Skins**: Players can pick between three distinct visual tether skins with live color swatches:
+- **Customizable Skins**:
   - ⛓ **Iron Chain** (Industrial linked steel)
   - 🪢 **Rope Fiber** (Braided mountaineering hemp)
   - ✨ **Neon Beam** (Cyan energy plasma laser)
@@ -120,19 +191,12 @@ Unlike traditional metaverse mini-games that rely on static obstacle courses or 
 - **Live HUD Feedback**: The running HUD displays both real-time void gap clearance and upward velocity (e.g. `2.4m ↑0.23`).
 - **Lava Cloaking**: The void mesh remains hidden in the lobby and appears only when the countdown reaches zero.
 
-### 4. Infinite Procedural Platform Recycling
-- **Zero Memory Leaks**: An entity pool of platforms arranged in a vertical spiral layout (`SPIRAL_POINTS`) continuously teleports ahead of climbers.
-- **Kinetic Oscillations**: Floating platforms swing horizontally along the X-axis using sinusoidal motion, with randomized starting phases to prevent harmonic clustering.
-- **8 Altitude Biomes**: Platforms transition through progressive neon trim palettes as squads climb higher:
-  `Cyber Cyan` ➔ `Radiant Violet` ➔ `Electric Magenta` ➔ `Hyper Gold` ➔ `Emerald Matrix` ➔ `Solar Amber` ➔ `Quantum Indigo` ➔ `Ultra Plasma`.
-- **Perimeter Containment**: 80-metre-tall invisible collision forcefields encircle the 16×16m parcel to prevent players from accidentally falling outside scene boundaries.
-
-### 5. Cyber-Gems & Continuous Scoring Engine
+### 4. Cyber-Gems & Continuous Scoring Engine
 - Floating Cyber-Gems (+250 PTS each) spawn probabilistically on platforms with hovering animations and particle collection fanfare.
 - Continuous scoring formula guarantees every metre climbed, second survived, and gem collected counts:
   $$\text{Score} = \lfloor(\text{MaxAltitude} \times 100) + (\text{SurvivalSeconds} \times 10) + (\text{GemsCollected} \times 250)\rfloor$$
 
-### 6. Rapid Rematch Loop
+### 5. Rapid Rematch Loop
 - On run failure, squads can hit **⚡ REMATCH SQUAD** to instantly restart the climb without breaking their tether link or returning to the lobby.
 
 ---
@@ -212,17 +276,22 @@ Chainmates utilizes Decentraland's native peer-to-peer `MessageBus` for zero-lat
 
 ### Authoritative Leaderboard Backend
 
-The leaderboard is hosted on a high-availability Node.js/Express service deployed on Render:
+The leaderboard is hosted on a high-availability Node.js/Express service deployed on Render with an integrated anti-cheat engine:
 
 - **Live URL**: `https://chainmates.onrender.com`
-- **Endpoints**:
+- **Security & Anti-Cheat Stack**:
+  - `helmet` security headers & strict CORS policies.
+  - `express-rate-limit` per-IP request throttling (6 score submissions/min, 60 leaderboard fetches/min).
+  - Mathematical sanity validation checking score-to-altitude ratios, timestamp delta, and gem collection bounds.
+  - Automated segregation of solo practice runs from verified co-op duo high-score tables.
+- **REST Endpoints**:
   - `GET /health` — Keep-alive heartbeat & uptime reporting
   - `GET /api/leaderboard` — Returns Top 50 global Squad and Solo rankings
-  - `POST /api/score` — Submits verified completed run scores
+  - `POST /api/score` — Submits and validates completed run scores
 - **Offline Resilience & Keep-Alive**:
   - Automatic warmup call on scene load.
   - Heartbeat pings sent every 5 minutes to prevent free-tier cold-starts.
-  - Local optimistic cache with background retry queue for offline tolerance.
+  - Local optimistic cache with background retry queue for seamless offline tolerance.
 
 ---
 
@@ -281,7 +350,7 @@ npm run build
   - `ALLOW_TO_TRIGGER_AVATAR_EMOTE`
   - `ALLOW_TO_MOVE_PLAYER_INSIDE_SCENE`
   - `ALLOW_MEDIA_HOSTNAMES` (`*.onrender.com`, `api.jsonbin.io`)
-- **Creator Address**: `0x1bf70d598f0e539ac7169a218f3ae34c7af3b3bb`
+- **Creator Address**: `0xad0d520fdae7b1ed9a41d2078dbf75a9c5b55129`
 
 ---
 

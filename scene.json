@@ -3,7 +3,7 @@
   "runtimeVersion": "7",
   "display": {
     "title": "Chainmates — Endless Co-Op Climb",
-    "description": "The Endless Co-Op mobile-first climb for Decentraland! Bound by a dynamic 4.0m elastic tether, players must coordinate jumps across procedurally generated kinetic platforms while outrunning the rising Electric Void Abyss. Features true physical co-op tension, an autonomous AI Ball Droid for solo play, 8 shifting neon biomes, and live global duo leaderboards.",
+    "description": "The premier mobile-first co-op tether platformer for Decentraland! Features an interactive Lobby & Squad Matchmaking lounge, dynamic 4.0m elastic physics, an endless procedural obstacle course with kinetic platforms, 8 altitude neon biomes, autonomous AI Ball Droid solo mode, 60 FPS mobile optimizations, and an anti-cheat server-based global duo leaderboard.",
     "favicon": "assets/logo.png",
     "navmapThumbnail": "assets/images/thumbnail.png"
   },
