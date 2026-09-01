@@ -53,7 +53,7 @@ import {
   pushPersistentLeaderboard,
   serverHeartbeatSystem
 } from './serverLeaderboard'
-import { startBgMusic } from './audio'
+import { startBgMusic, playYankSound } from './audio'
 
 // ─── Yank flash timer & UI throttle ──────────────────────────────────────────
 let yankFlashTimer = 0
@@ -80,6 +80,7 @@ export function main() {
   gameState.onYankReceived = () => {
     yankFlashTimer = YANK_FLASH_DURATION
     setUiYankFlash(true)
+    playYankSound()
   }
 
   // 2. Fetch local player identity asynchronously

@@ -95,6 +95,7 @@ export interface RecycledPlatform {
 export const platformPool: RecycledPlatform[] = []
 export const platformEntityMap = new Map<ReturnType<typeof engine.addEntity>, RecycledPlatform>()
 export let lavaEntity: ReturnType<typeof engine.addEntity> | null = null
+export let lavaOverlayEntity: ReturnType<typeof engine.addEntity> | null = null
 
 // ─── Solid Box Platform Helper ────────────────────────────────────────────────
 export function makePlatform(
@@ -294,35 +295,74 @@ function buildMoltenLavaAbyss() {
     MeshCollider.setBox(wall)
   }
 
-  // 4. Rising Electric Void Abyss Plane
+  // 4. Rising Electric Neon Void Abyss (GPU-Accelerated Dual-Layer Moving Plasma)
   lavaEntity = engine.addEntity()
   Transform.create(lavaEntity, {
     position: Vector3.create(8.0, 0.05, 8.0),
-    scale: Vector3.create(50.8, 0.2, 50.8)
+    scale: Vector3.create(50.8, 0.25, 50.8)
   })
   MeshRenderer.setBox(lavaEntity)
   Material.setPbrMaterial(lavaEntity, {
     texture: Material.Texture.Common({
       src: 'assets/textures/void.jpg',
       wrapMode: TextureWrapMode.TWM_REPEAT,
-      filterMode: TextureFilterMode.TFM_TRILINEAR
+      filterMode: TextureFilterMode.TFM_TRILINEAR,
+      tiling: { x: 5, y: 5 }
     }),
     emissiveTexture: Material.Texture.Common({
       src: 'assets/textures/void.jpg',
       wrapMode: TextureWrapMode.TWM_REPEAT,
-      filterMode: TextureFilterMode.TFM_TRILINEAR
+      filterMode: TextureFilterMode.TFM_TRILINEAR,
+      tiling: { x: 5, y: 5 }
     }),
-    emissiveColor: Color4.create(0.85, 0.40, 1.00, 1), // glowing electric violet pulse
-    emissiveIntensity: 2.5,
-    metallic: 0.0,
-    roughness: 1.0
+    emissiveColor: Color4.create(0.80, 0.25, 1.00, 1), // Radiant electric violet base
+    emissiveIntensity: 3.2,
+    metallic: 0.2,
+    roughness: 0.3
   })
 
-  // Continuous churning electric energy surface UV animation (GPU-evaluated)
+  // Primary GPU UV scrolling: Deep cosmic void flows south-east
   Tween.setTextureMoveContinuous(
     lavaEntity,
-    Vector2.create(0.06, 0.03),
-    0.12,
+    Vector2.create(0.08, 0.04),
+    0.14,
+    TextureMovementType.TMT_OFFSET
+  )
+
+  // Secondary GPU Layer: Translucent Neon Cyan Energy Shimmer Mesh (Parented to move automatically)
+  lavaOverlayEntity = engine.addEntity()
+  Transform.create(lavaOverlayEntity, {
+    position: Vector3.create(0, 0.14, 0),
+    scale: Vector3.create(1.0, 0.01, 1.0),
+    parent: lavaEntity
+  })
+  MeshRenderer.setBox(lavaOverlayEntity)
+  Material.setPbrMaterial(lavaOverlayEntity, {
+    texture: Material.Texture.Common({
+      src: 'assets/textures/Neon.png',
+      wrapMode: TextureWrapMode.TWM_REPEAT,
+      filterMode: TextureFilterMode.TFM_BILINEAR,
+      tiling: { x: 14, y: 14 }
+    }),
+    emissiveTexture: Material.Texture.Common({
+      src: 'assets/textures/Neon.png',
+      wrapMode: TextureWrapMode.TWM_REPEAT,
+      filterMode: TextureFilterMode.TFM_BILINEAR,
+      tiling: { x: 14, y: 14 }
+    }),
+    albedoColor: Color4.create(0.1, 0.9, 1.0, 0.85),
+    emissiveColor: Color4.create(0.0, 0.95, 1.0, 0.9), // Radiant cyber cyan glow
+    emissiveIntensity: 2.8,
+    transparencyMode: MaterialTransparencyMode.MTM_ALPHA_BLEND,
+    metallic: 0.1,
+    roughness: 0.1
+  })
+
+  // Counter-flowing GPU UV scrolling: Cyan plasma grid flows north-west (creates dual-layer shimmering interference)
+  Tween.setTextureMoveContinuous(
+    lavaOverlayEntity,
+    Vector2.create(-0.06, 0.09),
+    0.18,
     TextureMovementType.TMT_OFFSET
   )
 
@@ -343,6 +383,7 @@ function buildMoltenLavaAbyss() {
 
   // Hidden until a run starts
   VisibilityComponent.create(lavaEntity, { visible: false })
+  VisibilityComponent.create(lavaOverlayEntity, { visible: false })
 }
 
 /**
@@ -423,12 +464,18 @@ export function resetLavaPosition() {
     t.position = Vector3.create(8.0, 0.05, 8.0)
     VisibilityComponent.createOrReplace(lavaEntity, { visible: false })
   }
+  if (lavaOverlayEntity) {
+    VisibilityComponent.createOrReplace(lavaOverlayEntity, { visible: false })
+  }
 }
 
 /** Show or hide the lava entity (shown only during active runs) */
 export function setLavaVisible(visible: boolean) {
   if (lavaEntity) {
     VisibilityComponent.createOrReplace(lavaEntity, { visible })
+  }
+  if (lavaOverlayEntity) {
+    VisibilityComponent.createOrReplace(lavaOverlayEntity, { visible })
   }
 }
 

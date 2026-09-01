@@ -31,26 +31,6 @@
       }
     },
     {
-      "name": "inspector::Selection",
-      "jsonSchema": {
-        "type": "object",
-        "properties": {
-          "gizmo": {
-            "type": "integer",
-            "serializationType": "int32"
-          }
-        },
-        "serializationType": "map"
-      },
-      "data": {
-        "0": {
-          "json": {
-            "gizmo": 0
-          }
-        }
-      }
-    },
-    {
       "name": "inspector::Nodes",
       "jsonSchema": {
         "type": "object",
@@ -452,8 +432,8 @@
       "data": {
         "0": {
           "json": {
-            "name": "Chainmates",
-            "description": "The ultimate mobile-first co-op climb! Bound by an elastic 4m tether, two players must jump, balance, and cooperate across shifting kinetic platforms to escape the rising Electric Void Abyss. Team up with a partner or scale the heights with the AI companion to claim #1 on the global leaderboard!",
+            "name": "Chainmates — Endless Co-Op Climb",
+            "description": "The Endless Co-Op mobile-first climb for Decentraland! Bound by a dynamic 4.0m elastic tether, players must coordinate jumps across procedurally generated kinetic platforms while outrunning the rising Electric Void Abyss. Features true physical co-op tension, an autonomous AI Ball Droid for solo play, 8 shifting neon biomes, and live global duo leaderboards.",
             "thumbnail": "assets/images/thumbnail.png",
             "ageRating": "A",
             "categories": [
@@ -464,17 +444,19 @@
             "email": "nabil.aaaman@gmail.com",
             "tags": [],
             "layout": {
-              "base": {
-                "x": 0,
-                "y": 0
-              },
               "parcels": [
                 {
                   "x": 0,
                   "y": 0
                 }
-              ]
+              ],
+              "base": {
+                "x": 0,
+                "y": 0
+              }
             },
+            "silenceVoiceChat": false,
+            "disablePortableExperiences": false,
             "spawnPoints": [
               {
                 "name": "LobbyWaitingLounge",
@@ -511,6 +493,7 @@
             ],
             "skyboxConfig": {},
             "creator": "0xad0d520fdae7b1ed9a41d2078dbf75a9c5b55129",
+            "disableNearbyVoiceChat": false,
             "hideLandscapeTerrain": true
           }
         }

@@ -286,35 +286,44 @@ export function tetherSystem(dt: number) {
   // ── Responsive Elastic Tether & Physics Impulse ───────────────────────────
   const yDiff = myPos.y - partnerPos.y
 
+  // Continuous spring tension in TAUT state (3.0m - 4.0m): gentle elastic resistance
+  if (dist >= 3.0 && dist <= MAX_CHAIN_LENGTH) {
+    const tautRatio = (dist - 3.0) / (MAX_CHAIN_LENGTH - 3.0)
+    const springForce = tautRatio * 4.5
+    const springDir = Vector3.normalize(dir)
+    Physics.applyImpulseToPlayer(springDir, springForce * dt * 8.0)
+  }
+
+  // Strong elastic pull & fall drag in YANKED state (> 4.0m)
   if (dist > MAX_CHAIN_LENGTH && pullCooldownTimer <= 0) {
-    pullCooldownTimer = PULL_INTERVAL
+    pullCooldownTimer = 0.12 // fast 120ms tick for immediate, snappy physical response
     tetherState.tension = 'YANKED'
     playYankSound()
 
     const excessDist = dist - MAX_CHAIN_LENGTH
 
-    // 1. If dangling below partner: apply upward + inward hoist impulse toward partner's platform
-    if (yDiff < -1.0) {
-      const hoistDir = Vector3.normalize(Vector3.create(dir.x, Math.max(dir.y, 1.2), dir.z))
-      const hoistForce = Math.min(excessDist * 9.0 + 7.0, 22.0)
+    // 1. If dangling below partner: apply strong upward + inward hoist impulse toward partner's platform
+    if (yDiff < -0.8) {
+      const hoistDir = Vector3.normalize(Vector3.create(dir.x * 1.2, Math.max(dir.y * 1.5, 1.4), dir.z * 1.2))
+      const hoistForce = Math.min(excessDist * 12.0 + 10.0, 26.0)
       Physics.applyImpulseToPlayer(hoistDir, hoistForce)
     }
-    // 2. If partner is dangling below me: apply weight drag impulse toward partner
-    else if (yDiff > 1.0) {
-      const dragDir = Vector3.normalize(Vector3.create(dir.x, -0.5, dir.z))
-      const dragForce = Math.min(excessDist * 6.0 + 3.5, 14.0)
+    // 2. If partner is dangling below me: apply heavy downward + edge drag impulse toward partner
+    else if (yDiff > 0.8) {
+      const dragDir = Vector3.normalize(Vector3.create(dir.x * 1.3, -1.2, dir.z * 1.3))
+      const dragForce = Math.min(excessDist * 10.0 + 8.0, 22.0)
       Physics.applyImpulseToPlayer(dragDir, dragForce)
     }
     // 3. Standard horizontal elastic tension pull
     else {
       const pullDir = Vector3.normalize(dir)
-      const pullForce = Math.min(excessDist * 8.0 + 5.0, 18.0)
+      const pullForce = Math.min(excessDist * 11.0 + 8.0, 24.0)
       Physics.applyImpulseToPlayer(pullDir, pullForce)
     }
 
-    // Extreme desync fallback (>7.0m separation): smoothly catch player within boundary
-    if (dist > MAX_CHAIN_LENGTH + 3.0) {
-      const pullTarget = Vector3.add(myPos, Vector3.scale(dir, 0.45))
+    // Extreme separation catch (>6.5m): smoothly pull player within boundary
+    if (dist > MAX_CHAIN_LENGTH + 2.5) {
+      const pullTarget = Vector3.add(myPos, Vector3.scale(dir, 0.5))
       movePlayerTo({
         newRelativePosition: {
           x: pullTarget.x,

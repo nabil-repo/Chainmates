@@ -155,6 +155,8 @@ export function gemCollectionSystem(_dt: number) {
 
 let globalElapsed = 0
 
+let lastSkyboxTier = -1
+
 /** Updates rising molten lava position & synchronizes altitude skybox */
 export function lavaSystem(_dt: number) {
   if (!lavaEntity) return
@@ -164,8 +166,12 @@ export function lavaSystem(_dt: number) {
   const transform = Transform.getMutable(lavaEntity)
   transform.position = Vector3.create(8.0, gameState.lavaHeight, 8.0)
 
-  // Dynamically shift skybox atmosphere based on current max altitude climbed
-  updateAltitudeSkybox(gameState.maxAltitude)
+  // Only update skybox when crossing altitude tiers (eliminates per-frame CRDT serialization)
+  const currentTier = Math.floor(gameState.maxAltitude / 20)
+  if (currentTier !== lastSkyboxTier) {
+    lastSkyboxTier = currentTier
+    updateAltitudeSkybox(gameState.maxAltitude)
+  }
 }
 
 /** Oscillates all MovingPlatform entities back and forth on the X-axis,

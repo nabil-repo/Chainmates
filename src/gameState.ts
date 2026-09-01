@@ -9,7 +9,15 @@
  */
 
 import { MessageBus } from '@dcl/sdk/message-bus'
-import { EngineInfo, engine, Transform, InputModifier } from '@dcl/sdk/ecs'
+import {
+  EngineInfo,
+  engine,
+  Transform,
+  InputModifier,
+  TouchScreenControls,
+  InputAction,
+  AvatarLocomotionSettings
+} from '@dcl/sdk/ecs'
 import { movePlayerTo, triggerEmote } from '~system/RestrictedActions'
 import { resetPlatformPool, resetLavaPosition, setLavaVisible } from './course'
 import { createPracticeBot, destroyPracticeBot } from './practiceBot'
@@ -200,10 +208,36 @@ bus.on('cm:tether_leave', (data: TetherLeaveMsg) => {
 })
 
 /**
- * Enables or disables player movement controls (WASD/arrows/jump on PC, joystick/jump on mobile)
- * Controls are disabled until the game starts (RUNNING phase).
+ * Enables or disables player movement controls and configures mobile touch ergonomics:
+ *  - Disables glider & double-jump entirely (pure platforming climb)
+ *  - Hides unnecessary mobile action buttons (E, F, 1, 2, 3, 4, Pointer)
+ *  - Keeps only Virtual Joystick (movement) and Jump button (IA_JUMP)
  */
 export function updateControlsForPhase(phase: GamePhase) {
+  // 1. Hide unnecessary on-screen buttons on Mobile client (E, F, 1, 2, 3, 4, Pointer)
+  TouchScreenControls.createOrReplace(engine.RootEntity, {
+    touchInputs: [
+      { inputAction: InputAction.IA_PRIMARY, hide: true },
+      { inputAction: InputAction.IA_SECONDARY, hide: true },
+      { inputAction: InputAction.IA_ACTION_3, hide: true },
+      { inputAction: InputAction.IA_ACTION_4, hide: true },
+      { inputAction: InputAction.IA_ACTION_5, hide: true },
+      { inputAction: InputAction.IA_ACTION_6, hide: true },
+      { inputAction: InputAction.IA_POINTER, hide: true }
+    ],
+    mainAction: InputAction.IA_JUMP,
+    hideCrosshair: true,
+    hideJoystick: false
+  })
+
+  // 2. Disable glider & double-jump via AvatarLocomotionSettings
+  AvatarLocomotionSettings.createOrReplace(engine.PlayerEntity, {
+    glidingSpeed: 0,
+    glidingFallingSpeed: 9.8,
+    doubleJumpHeight: 0
+  })
+
+  // 3. Configure InputModifier based on phase
   if (phase === 'RUNNING' || phase === 'PRACTICE') {
     InputModifier.createOrReplace(engine.PlayerEntity, {
       mode: InputModifier.Mode.Standard({
@@ -213,7 +247,8 @@ export function updateControlsForPhase(phase: GamePhase) {
         disableRun: false,
         disableJump: false,
         disableEmote: false,
-        disableGliding: true
+        disableGliding: true,
+        disableDoubleJump: true
       })
     })
   } else {
@@ -225,7 +260,8 @@ export function updateControlsForPhase(phase: GamePhase) {
         disableRun: true,
         disableJump: true,
         disableEmote: true,
-        disableGliding: true
+        disableGliding: true,
+        disableDoubleJump: true
       })
     })
   }
