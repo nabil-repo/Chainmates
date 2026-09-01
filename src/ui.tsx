@@ -915,19 +915,88 @@ const CountdownScreen = () => (
   </UiEntity>
 )
 
+// ─── Static Tokens & Styles for Plain Vertical Void Gauge (Zero Allocation) ───
+const BAR_TRACK_BG = Color4.create(0.02, 0.04, 0.10, 0.75)
+const BAR_FILL_CYAN = Color4.create(0.12, 0.85, 1.0, 0.90)
+const BAR_FILL_AMBER = Color4.create(1.0, 0.65, 0.10, 0.95)
+const BAR_FILL_RED = Color4.create(1.0, 0.18, 0.22, 0.98)
+
+const BG_TRACK = { color: BAR_TRACK_BG }
+const BG_FILL_CYAN = { color: BAR_FILL_CYAN }
+const BG_FILL_AMBER = { color: BAR_FILL_AMBER }
+const BG_FILL_RED = { color: BAR_FILL_RED }
+
+const VOID_BAR_ROOT_STYLE = {
+  positionType: 'absolute' as const,
+  position: { right: 14, top: 200 },
+  flexDirection: 'column' as const,
+  alignItems: 'center' as const
+}
+
+const VOID_BAR_LABEL_STYLE = { margin: { bottom: 4 } }
+
+const VOID_BAR_TRACK_STYLE = {
+  width: 14,
+  height: 140,
+  flexDirection: 'column' as const,
+  justifyContent: 'flex-end' as const,
+  alignItems: 'center' as const,
+  padding: 1
+}
+
+// ─── Plain Vertical Neon Void Progress Bar with Zero-Allocation Styles ────────
+const PlainVerticalVoidBar = (props: { voidGap: number; isNear: boolean }) => {
+  // Map void gap (0m to 8m) to vertical fill height (6px to 134px out of 140px track)
+  const normalizedGap = Math.max(0, Math.min(props.voidGap / 8.0, 1.0))
+  const fillHeight = Math.round(((1.0 - normalizedGap) * 128 + 6) / 4) * 4
+
+  const fillBg = props.isNear
+    ? BG_FILL_RED
+    : props.voidGap < 4.0
+      ? BG_FILL_AMBER
+      : BG_FILL_CYAN
+
+  return (
+    <UiEntity uiTransform={VOID_BAR_ROOT_STYLE}>
+      {/* Top Label */}
+      <Label
+        value='VOID'
+        fontSize={14}
+        color={C.textMuted}
+        font='monospace'
+        uiTransform={VOID_BAR_LABEL_STYLE}
+      />
+
+      {/* Track & Dynamic Fill */}
+      <UiEntity
+        uiTransform={VOID_BAR_TRACK_STYLE}
+        uiBackground={BG_TRACK}
+      >
+        <UiEntity
+          uiTransform={{
+            width: 12,
+            height: fillHeight
+          }}
+          uiBackground={fillBg}
+        />
+      </UiEntity>
+    </UiEntity>
+  )
+}
+
 // ─── 3. RUNNING HUD ───────────────────────────────────────────────────────────
 const RunningHud = () => {
   const lavaDist = Math.max(0, Math.round((gameState.currentAltitude + 2.0 - gameState.lavaHeight) * 10) / 10)
   const lavaNear = lavaDist < 2.2 && gameState.currentElapsedMs > 6000
-  const tension = tetherState.tension
+  // const tension = tetherState.tension
 
   // Tension badge info
-  const tensionInfo =
-    tension === 'YANKED'
-      ? { icon: 'assets/icons/zap.png', label: 'TETHER YANKED', color: C.red, bg: C.redDark }
-      : tension === 'TAUT'
-        ? { icon: 'assets/icons/alert-triangle.png', label: 'TETHER TAUT', color: C.gold, bg: Color4.create(0.35, 0.25, 0.02, 0.95) }
-        : { icon: 'assets/icons/check.png', label: 'SLACK (OK)', color: C.emerald, bg: Color4.create(0.02, 0.20, 0.08, 0.85) }
+  // const tensionInfo =
+  //   tension === 'YANKED'
+  //     ? { icon: 'assets/icons/zap.png', label: 'TETHER YANKED', color: C.red, bg: C.redDark }
+  //     : tension === 'TAUT'
+  //       ? { icon: 'assets/icons/alert-triangle.png', label: 'TETHER TAUT', color: C.gold, bg: Color4.create(0.35, 0.25, 0.02, 0.95) }
+  //       : { icon: 'assets/icons/check.png', label: 'SLACK (OK)', color: C.emerald, bg: Color4.create(0.02, 0.20, 0.08, 0.85) }
 
   return (
     <UiEntity
@@ -940,6 +1009,10 @@ const RunningHud = () => {
         padding: { top: 16 }
       }}
     >
+
+      {/* Plain Minimalist Vertical Void Gauge (2 Nodes / 0 Text) */}
+      <PlainVerticalVoidBar voidGap={lavaDist} isNear={lavaNear} />
+
       {/* Main Top Modular HUD Ribbon */}
       <UiEntity
         uiTransform={{
@@ -953,21 +1026,21 @@ const RunningHud = () => {
         <VDivider />
         <StatBox icon='assets/icons/mountain.png' label='ALTITUDE' value={`${gameState.currentAltitude} M`} color={C.cyan} isMono={true} />
         <VDivider />
-        <StatBox
+        {/* <StatBox
           icon='assets/icons/flame.png'
           label='VOID GAP'
           value={`${lavaDist.toFixed(1)}m ↑${gameState.lavaSpeed.toFixed(2)}`}
           color={lavaNear ? C.red : C.purple}
           isMono={true}
-        />
-        <VDivider />
+        /> */}
+        {/* <VDivider /> */}
         <StatBox icon='assets/icons/star.png' label='GEMS' value={`💎 ${gameState.gemsCollected || 0}`} color={C.emerald} isMono={true} />
         <VDivider />
         <StatBox icon='assets/icons/clock.png' label='TIME' value={uiState.elapsedFormatted} color={C.textWhite} isMono={true} />
       </UiEntity>
 
       {/* Tension Status Pill */}
-      <UiEntity
+      {/* <UiEntity
         uiTransform={{
           flexDirection: 'row',
           alignItems: 'center',
@@ -983,7 +1056,7 @@ const RunningHud = () => {
           color={tensionInfo.color}
           font='sans-serif'
         />
-      </UiEntity>
+      </UiEntity> */}
 
       {/* Yank Danger Flash Banner with High-Contrast Alert */}
       {uiState.yankFlash && (

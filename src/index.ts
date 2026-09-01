@@ -109,14 +109,22 @@ export function main() {
   setupUi()
   updateControlsForPhase('LOBBY')
 
-  // Preload companion 3D model and core textures for zero-stutter Android mobile experience
+  // Preload companion 3D model, textures, and spatial SFX for zero-stutter Android mobile experience
   AssetLoad.createOrReplace(engine.RootEntity, {
     assets: [
       'assets/asset-packs/ball_droid/Droid_01/Droid_01.glb',
       'assets/textures/void.jpg',
+      'assets/textures/fog.png',
       'assets/textures/Chain.png',
       'assets/textures/Rope.png',
-      'assets/textures/Neon.png'
+      'assets/textures/Neon.png',
+      'assets/sounds/bg_music.mp3',
+      'assets/sounds/gem.wav',
+      'assets/sounds/yank.wav',
+      'assets/sounds/tick.wav',
+      'assets/sounds/go.wav',
+      'assets/sounds/milestone.wav',
+      'assets/sounds/void_fall.wav'
     ]
   })
 
@@ -147,15 +155,15 @@ function mainUpdateSystem(dt: number) {
   // Tick game state (countdown timer, run timer, stale player cleanup)
   updateGameState(dt)
 
-  // Push current elapsed time to UI at 10 FPS max (prevents 60fps React-ECS virtual DOM thrashing)
+  // Push UI updates at 10 FPS max (prevents 60fps React-ECS virtual DOM thrashing)
   uiThrottleTimer += dt
   if (uiThrottleTimer >= 0.1) {
+    const elapsed = uiThrottleTimer
     uiThrottleTimer = 0
     if (gameState.phase === 'RUNNING' || gameState.phase === 'PRACTICE') {
       updateUiEach(gameState.currentElapsedMs)
     }
+    // Tick UI state (auto-dismiss alerts & throttled radar)
+    tickUi(elapsed)
   }
-
-  // Tick UI state (auto-dismiss alerts)
-  tickUi(dt)
 }

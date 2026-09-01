@@ -433,13 +433,15 @@ function buildAtmosphericFog() {
       ...fogMat,
       emissiveIntensity: 1.0
     })
+    // GPU-accelerated horizontal drift — 0 CPU per-frame overhead
+    Tween.setTextureMoveContinuous(wallFog, Vector2.create(0.015, 0.0), 0.03, TextureMovementType.TMT_OFFSET)
     fogEntities.push(wallFog)
   }
 
   // 2. High-Altitude Stratosphere Cloud Layers (Only at 28m and 55m — far above lounge)
   const highCloudConfigs = [
-    { y: 28.0, rotY: 45, scale: 32.0 },
-    { y: 55.0, rotY: 90, scale: 32.0 }
+    { y: 28.0, rotY: 45, scale: 32.0, speed: 2.0 },
+    { y: 55.0, rotY: 90, scale: 32.0, speed: -1.6 }
   ]
   for (const cfg of highCloudConfigs) {
     const layer = engine.addEntity()
@@ -453,6 +455,8 @@ function buildAtmosphericFog() {
       ...fogMat,
       emissiveIntensity: 0.8
     })
+    // GPU-accelerated continuous texture swirl
+    Tween.setTextureMoveContinuous(layer, Vector2.create(0.02, 0.03), 0.05, TextureMovementType.TMT_OFFSET)
     fogEntities.push(layer)
   }
 }

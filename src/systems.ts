@@ -269,19 +269,9 @@ export function hazardObstacleSystem(dt: number) {
   }
 }
 
-let fogRotation = 0
-
-/** Drifts and slowly rotates atmospheric mist and cloud layers */
-export function fogAnimationSystem(dt: number) {
-  fogRotation += dt * 0.04
-
-  for (let i = 0; i < fogEntities.length; i++) {
-    const fog = fogEntities[i]
-    const dir = i % 2 === 0 ? 1 : -1
-    const rot = Quaternion.fromEulerDegrees(0, (fogRotation * dir * 180 / Math.PI) + i * 45, 0)
-    const t = Transform.getMutable(fog)
-    t.rotation = rot
-  }
+/** Fog & cloud drift is GPU-accelerated via Tween.setTextureMoveContinuous (0 CPU per-frame overhead) */
+export function fogAnimationSystem(_dt: number) {
+  // Handled entirely on GPU
 }
 
 
