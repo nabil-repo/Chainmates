@@ -444,19 +444,17 @@
             "email": "nabil.aaaman@gmail.com",
             "tags": [],
             "layout": {
+              "base": {
+                "x": 0,
+                "y": 0
+              },
               "parcels": [
                 {
                   "x": 0,
                   "y": 0
                 }
-              ],
-              "base": {
-                "x": 0,
-                "y": 0
-              }
+              ]
             },
-            "silenceVoiceChat": false,
-            "disablePortableExperiences": false,
             "spawnPoints": [
               {
                 "name": "LobbyWaitingLounge",
@@ -491,9 +489,10 @@
                 }
               }
             ],
-            "skyboxConfig": {},
+            "skyboxConfig": {
+              "fixedTime": 3240
+            },
             "creator": "0xad0d520fdae7b1ed9a41d2078dbf75a9c5b55129",
-            "disableNearbyVoiceChat": false,
             "hideLandscapeTerrain": true
           }
         }

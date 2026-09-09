@@ -64,11 +64,13 @@
     "nearbyVoiceChat": "enabled"
   },
   "creator": "0xad0d520fdae7b1ed9a41d2078dbf75a9c5b55129",
-  "skyboxConfig": {},
+  "skyboxConfig": {
+    "fixedTime": 3900
+  },
   "worldConfiguration": {
     "name": "OverlookHotel.dcl.eth",
     "skyboxConfig": {
-      "fixedTime": 0
+      "fixedTime": 3900
     }
   },
   "landscapeTerrain": false,

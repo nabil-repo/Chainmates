@@ -1,10 +1,5 @@
 # ⛓️ Chainmates — Scene & Judge Testing Guide
 
-> **Decentraland Friendzone Mobile Buildathon 2026** ($8,000 MANA Prize Pool)  
-> **World Domain:** `OverlookHotel.dcl.eth` | **Parcel:** `0,0` (16m × 16m) | **SDK:** SDK7 (`runtimeVersion: "7"`)
-
----
-
 ## 🌟 Quick Overview
 
 **Chainmates** is a physics-driven, mobile-first co-op tether platformer for Decentraland. Two players are physically bound by an elastic 4.0m tether and must coordinate their jumps across an endless procedurally recycled spiral tower while outrunning the rising **Electric Void Abyss**.
