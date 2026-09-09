@@ -342,7 +342,7 @@ npm run build
 ## 📋 Buildathon & Scene Specifications
 
 - **Competition**: Decentraland Friendzone Mobile Buildathon 2026
-- **World Name**: `chainmates.dcl.eth`
+- **World Name**: `OverlookHotel.dcl.eth`
 - **Parcel Footprint**: 1×1 Parcel (`0,0` — 16m × 16m)
 - **Vertical Reach**: 80+ Metres procedural climbing height
 - **SDK Version**: Decentraland SDK7 (`runtimeVersion: "7"`)
