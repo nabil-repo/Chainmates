@@ -2,7 +2,7 @@
 
 ## 🌟 Quick Overview
 
-**Chainmates** is a physics-driven, mobile-first co-op tether platformer for Decentraland. Two players are physically bound by an elastic 4.0m tether and must coordinate their jumps across an endless procedurally recycled spiral tower while outrunning the rising **Electric Void Abyss**.
+**Chainmates** is a physics-driven, mobile-first co-op tether platformer for Decentraland. Two players are physically bound by an elastic 7.0m tether and must coordinate their jumps across an endless procedurally recycled spiral tower while outrunning the rising **Electric Void Abyss**.
 
 ---
 
@@ -33,10 +33,10 @@
 
 ## ⚡ Core Scene Mechanics
 
-### 1. Dynamic 4.0m Elastic Tether
-- **🟢 SLACK (`< 3.0m`):** Full freedom of movement with natural sag.
-- **🟡 TAUT (`3.0m – 4.0m`):** Tension warning glow with resistance resistance.
-- **🔴 YANKED (`> 4.0m`):** Overstretched! Elastic impulse physics pulls overextended climbers back toward their partner with audio and visual warning alerts.
+### 1. Dynamic 7.0m Elastic Tether
+- **🟢 SLACK (`< 5.0m`):** Full freedom of movement with natural sag.
+- **🟡 TAUT (`5.0m – 7.0m`):** Tension warning glow with elastic resistance.
+- **🔴 YANKED (`> 7.0m`):** Overstretched! Elastic impulse physics pulls overextended climbers back toward their partner with audio and visual warning alerts.
 
 ### 2. Escalating Electric Void Abyss
 - Surges upward continuously from the tower base.

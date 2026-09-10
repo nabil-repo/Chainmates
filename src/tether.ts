@@ -21,7 +21,8 @@ import { getProxyEntity } from './playerSync'
 import { playYankSound } from './audio'
 
 // ─── Config ───────────────────────────────────────────────────────────────────
-const MAX_CHAIN_LENGTH = 4.0    // max chain length in meters
+export const MAX_CHAIN_LENGTH = 7.0    // max chain length in meters
+export const TAUT_RATIO = 0.72         // distance ratio where chain begins feeling taut (~5.0m)
 const PULL_INTERVAL = 0.25   // seconds between continuous elastic pulls
 const CHAIN_RADIUS = 0.18   // visual chain width (each plane = CHAIN_RADIUS * 2 wide)
 
@@ -190,9 +191,9 @@ export function tetherSystem(dt: number) {
     chainColor = SKIN_YANK_COLORS[skin]
     emissive = Color4.create(chainColor.r * 0.8, chainColor.g * 0.2, chainColor.b * 0.2, 0)
     tetherState.tension = 'YANKED'
-  } else if (ratio > 0.7) {
+  } else if (ratio > TAUT_RATIO) {
     // Taut — interpolate gold warning
-    const t = (ratio - 0.7) / 0.3
+    const t = (ratio - TAUT_RATIO) / (1.0 - TAUT_RATIO)
     const sc = SKIN_SLACK_COLORS[skin]
     const tc = SKIN_TAUT_COLORS[skin]
     chainColor = Color4.create(
@@ -223,10 +224,10 @@ export function tetherSystem(dt: number) {
       // Chain skin — texture with emissive tension overlay
       const tensionEmissive = dist >= MAX_CHAIN_LENGTH
         ? Color4.create(1.0, 0.05, 0.05, 1)
-        : ratio > 0.7
-          ? Color4.create((ratio - 0.7) / 0.3 * 0.8, (ratio - 0.7) / 0.3 * 0.4, 0, 1)
+        : ratio > TAUT_RATIO
+          ? Color4.create((ratio - TAUT_RATIO) / (1.0 - TAUT_RATIO) * 0.8, (ratio - TAUT_RATIO) / (1.0 - TAUT_RATIO) * 0.4, 0, 1)
           : Color4.create(0, 0, 0, 0)
-      const tensionEmissiveIntensity = dist >= MAX_CHAIN_LENGTH ? 2.5 : ratio > 0.7 ? 1.2 : 0
+      const tensionEmissiveIntensity = dist >= MAX_CHAIN_LENGTH ? 2.5 : ratio > TAUT_RATIO ? 1.2 : 0
 
       applyChainMaterial({
         texture: Material.Texture.Common({
@@ -286,9 +287,10 @@ export function tetherSystem(dt: number) {
   // ── Responsive Elastic Tether & Physics Impulse ───────────────────────────
   const yDiff = myPos.y - partnerPos.y
 
-  // Continuous spring tension in TAUT state (3.0m - 4.0m): gentle elastic resistance
-  if (dist >= 3.0 && dist <= MAX_CHAIN_LENGTH) {
-    const tautRatio = (dist - 3.0) / (MAX_CHAIN_LENGTH - 3.0)
+  // Continuous spring tension in TAUT state: gentle elastic resistance
+  const tautThreshold = MAX_CHAIN_LENGTH * TAUT_RATIO
+  if (dist >= tautThreshold && dist <= MAX_CHAIN_LENGTH) {
+    const tautRatio = (dist - tautThreshold) / (MAX_CHAIN_LENGTH - tautThreshold)
     const springForce = tautRatio * 4.5
     const springDir = Vector3.normalize(dir)
     Physics.applyImpulseToPlayer(springDir, springForce * dt * 8.0)

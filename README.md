@@ -1,4 +1,4 @@
-﻿<p align="center">
+<p align="center">
   <img src="assets/logo.png" alt="Chainmates Logo" width="220" />
 </p>
 
@@ -26,7 +26,7 @@
 - [📱 Optimal Performance for Mobile Devices (60 FPS)](#-optimal-performance-for-mobile-devices-60-fps)
 - [🛡️ Anti-Cheat & Authoritative Server Leaderboard](#️-anti-cheat--authoritative-server-leaderboard)
 - [🎮 Core Game Mechanics](#-core-game-mechanics)
-  - [1. Dynamic 4.0m Elastic Tether](#1-dynamic-40m-elastic-tether)
+  - [1. Dynamic 7.0m Elastic Tether](#1-dynamic-70m-elastic-tether)
   - [2. Solo Practice Mode & AI Ball Droid](#2-solo-practice-mode--ai-ball-droid)
   - [3. The Rising Electric Void Abyss](#3-the-rising-electric-void-abyss)
   - [4. Cyber-Gems & Continuous Scoring Engine](#4-cyber-gems--continuous-scoring-engine)
@@ -49,7 +49,7 @@
 
 ## 🌟 Project Overview
 
-**Chainmates** is a high-octane, physics-driven co-op platformer engineered from the ground up for the Decentraland Mobile client. Two players are physically linked by an elastic, 4.0-metre tether and must coordinate their movements to scale an infinite, procedurally generated vertical tower of kinetic platforms while outrunning a rising **Electric Void Abyss**.
+**Chainmates** is a high-octane, physics-driven co-op platformer engineered from the ground up for the Decentraland Mobile client. Two players are physically linked by an elastic, 7.0-metre tether and must coordinate their movements to scale an infinite, procedurally generated vertical tower of kinetic platforms while outrunning a rising **Electric Void Abyss**.
 
 Every jump requires teamwork: leap together to cross wide gaps, anchor your partner when they slip, and keep the chain within safe tension boundaries. If one player falls into the void, both are pulled down into the abyss!
 
@@ -74,7 +74,7 @@ Unlike traditional metaverse mini-games that rely on static obstacle courses or 
 | 3️⃣ | **⚡ Dynamic Kinetic Obstacle Course** | Sinusoidal oscillating platforms, rotating hazard cylinders, and a dynamic accelerating Electric Void Abyss. |
 | 4️⃣ | **📱 60 FPS Mobile Optimization** | Pre-allocated entity pooling, PBR material caching, 10 FPS lerped proxy syncing, and touch-first ergonomics with virtual joystick clearance. |
 | 5️⃣ | **🛡️ Anti-Cheat Authoritative Leaderboard** | High-availability Render REST backend with IP rate-limiting, mathematical sanity validation, strict duo vs solo score segregation, and offline resilience. |
-| 6️⃣ | **🤝 True Physical Interdependence** | Avatars bound by a 4.0m elastic tether with **3 live tension states** (Slack, Taut, Yanked) applying real elastic momentum impulses. |
+| 6️⃣ | **🤝 True Physical Interdependence** | Avatars bound by a 7.0m elastic tether with **3 live tension states** (Slack, Taut, Yanked) applying real elastic momentum impulses. |
 | 7️⃣ | **🤖 Autonomous AI Ball Droid Companion** | Solves the #1 flaw of multiplayer hackathon entries: *unplayability when tested solo*. With 1 tap, an autonomous hover droid binds to you. |
 
 ### 📊 Direct Comparison: Chainmates vs. Typical Metaverse Experiences
@@ -166,12 +166,12 @@ To ensure high-score integrity and prevent fraudulent client-side tampering, Cha
 
 ## 🎮 Core Game Mechanics
 
-### 1. Dynamic 4.0m Elastic Tether
-- **Physical Link**: Both avatars are bound by a 4.0-metre elastic tether rendered using crossed billboard quads with real-time UV coordinate animation.
+### 1. Dynamic 7.0m Elastic Tether
+- **Physical Link**: Both avatars are bound by a 7.0-metre elastic tether rendered using crossed billboard quads with real-time UV coordinate animation.
 - **Tension State Machine**:
-  - 🟢 **SLACK (`< 3.0m`)**: Ample slack. Full freedom of movement.
-  - 🟡 **TAUT (`3.0m – 4.0m`)**: Tension warning. Players feel resistance.
-  - 🔴 **YANKED (`> 4.0m`)**: Overstretched! Elastic impulse kicks in via `movePlayerTo`, pulling overextended players back toward their partner with visual warning flashes and audio cues.
+  - 🟢 **SLACK (`< 5.0m`)**: Ample slack. Full freedom of movement.
+  - 🟡 **TAUT (`5.0m – 7.0m`)**: Tension warning. Players feel elastic resistance.
+  - 🔴 **YANKED (`> 7.0m`)**: Overstretched! Elastic impulse kicks in, pulling overextended players back toward their partner with visual warning flashes and audio cues.
 - **Customizable Skins**:
   - ⛓ **Iron Chain** (Industrial linked steel)
   - 🪢 **Rope Fiber** (Braided mountaineering hemp)

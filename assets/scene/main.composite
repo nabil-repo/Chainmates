@@ -91,6 +91,36 @@
       }
     },
     {
+      "name": "inspector::UIState-v1",
+      "jsonSchema": {
+        "type": "object",
+        "properties": {
+          "sceneInfoPanelVisible": {
+            "type": "boolean",
+            "serializationType": "optional",
+            "optionalJsonSchema": {
+              "type": "boolean",
+              "serializationType": "boolean"
+            }
+          },
+          "uiDesignerOpen": {
+            "type": "boolean",
+            "serializationType": "optional",
+            "optionalJsonSchema": {
+              "type": "boolean",
+              "serializationType": "boolean"
+            }
+          }
+        },
+        "serializationType": "map"
+      },
+      "data": {
+        "0": {
+          "json": {}
+        }
+      }
+    },
+    {
       "name": "inspector::SceneMetadata-v5",
       "jsonSchema": {
         "type": "object",
@@ -433,7 +463,7 @@
         "0": {
           "json": {
             "name": "Chainmates — Endless Co-Op Climb",
-            "description": "The premier mobile-first co-op tether platformer for Decentraland! Features an interactive Lobby & Squad Matchmaking lounge, dynamic 4.0m elastic physics, an endless procedural obstacle course with kinetic platforms, 8 altitude neon biomes, autonomous AI Ball Droid solo mode, 60 FPS mobile optimizations, and an anti-cheat server-based global duo leaderboard.",
+            "description": "The premier mobile-first co-op tether platformer for Decentraland! Features an interactive Lobby & Squad Matchmaking lounge, dynamic 7.0m elastic physics, an endless procedural obstacle course with kinetic platforms, 8 altitude neon biomes, autonomous AI Ball Droid solo mode, 60 FPS mobile optimizations, and an anti-cheat server-based global duo leaderboard.",
             "thumbnail": "assets/images/thumbnail.png",
             "ageRating": "A",
             "categories": [
@@ -444,17 +474,19 @@
             "email": "nabil.aaaman@gmail.com",
             "tags": [],
             "layout": {
-              "base": {
-                "x": 0,
-                "y": 0
-              },
               "parcels": [
                 {
                   "x": 0,
                   "y": 0
                 }
-              ]
+              ],
+              "base": {
+                "x": 0,
+                "y": 0
+              }
             },
+            "silenceVoiceChat": false,
+            "disablePortableExperiences": false,
             "spawnPoints": [
               {
                 "name": "LobbyWaitingLounge",
@@ -490,9 +522,10 @@
               }
             ],
             "skyboxConfig": {
-              "fixedTime": 3240
+              "fixedTime": 3900
             },
             "creator": "0xad0d520fdae7b1ed9a41d2078dbf75a9c5b55129",
+            "disableNearbyVoiceChat": false,
             "hideLandscapeTerrain": true
           }
         }

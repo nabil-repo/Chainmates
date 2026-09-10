@@ -26,7 +26,7 @@ import {
   acceptTether,
   leaveSquad
 } from './gameState'
-import { setChainSkin, tetherState } from './tether'
+import { setChainSkin, tetherState, MAX_CHAIN_LENGTH } from './tether'
 import { toggleBgMusic, isBgMusicPlaying } from './audio'
 
 // ─── Design Tokens & Theme ───────────────────────────────────────────────────
@@ -427,9 +427,9 @@ const HowToPlayModal = () => (
         >
           <Icon src='assets/icons/link.png' size={28} color={C.gold} margin={{ right: 14 }} />
           <UiEntity uiTransform={{ flexDirection: 'column', width: '85%' }}>
-            <Label value='2. RESPECT THE 4.0M TETHER' fontSize={15} color={C.gold} font='sans-serif' />
+            <Label value={`2. RESPECT THE ${MAX_CHAIN_LENGTH.toFixed(1)}M TETHER`} fontSize={15} color={C.gold} font='sans-serif' />
             <Label
-              value='You are physically chained! Coordinate jumps across oscillating platforms. Exceeding 4.0m triggers an elastic yank.'
+              value={`You are physically chained! Coordinate jumps across oscillating platforms. Exceeding ${MAX_CHAIN_LENGTH.toFixed(1)}m triggers an elastic yank.`}
               fontSize={13}
               color={C.textDim}
               font='sans-serif'
@@ -735,7 +735,7 @@ const LobbyScreen = () => {
           >
             <Icon src='assets/icons/info.png' size={18} color={C.gold} margin={{ right: 8 }} />
             <Label
-              value='Max chain reach is 4.0m. Coordinate jumps to prevent yanks & avoid the rising void!'
+              value={`Max chain reach is ${MAX_CHAIN_LENGTH.toFixed(1)}m. Coordinate jumps to prevent yanks & avoid the rising void!`}
               fontSize={13}
               color={C.textDim}
               font='sans-serif'
@@ -1051,7 +1051,7 @@ const RunningHud = () => {
       >
         <Icon src={tensionInfo.icon} size={18} color={tensionInfo.color} margin={{ right: 8 }} />
         <Label
-          value={`${tensionInfo.label}  [${tetherState.distanceToPartner.toFixed(1)}m / 4.0m]`}
+          value={`${tensionInfo.label}  [${tetherState.distanceToPartner.toFixed(1)}m / ${MAX_CHAIN_LENGTH.toFixed(1)}m]`}
           fontSize={15}
           color={tensionInfo.color}
           font='sans-serif'
