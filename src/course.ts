@@ -317,8 +317,9 @@ function buildMoltenLavaAbyss() {
     }),
     emissiveColor: Color4.create(0.80, 0.25, 1.00, 1), // Radiant electric violet base
     emissiveIntensity: 3.2,
-    metallic: 0.2,
-    roughness: 0.3
+    metallic: 0.0,
+    roughness: 1.0,
+    specularIntensity: 0.0
   })
 
   // Primary GPU UV scrolling: Deep cosmic void flows south-east
@@ -354,8 +355,9 @@ function buildMoltenLavaAbyss() {
     emissiveColor: Color4.create(0.0, 0.95, 1.0, 0.9), // Radiant cyber cyan glow
     emissiveIntensity: 2.8,
     transparencyMode: MaterialTransparencyMode.MTM_ALPHA_BLEND,
-    metallic: 0.1,
-    roughness: 0.1
+    metallic: 0.0,
+    roughness: 1.0,
+    specularIntensity: 0.0
   })
 
   // Counter-flowing GPU UV scrolling: Cyan plasma grid flows north-west (creates dual-layer shimmering interference)
