@@ -29,33 +29,43 @@ import {
 import { setChainSkin, tetherState, MAX_CHAIN_LENGTH } from './tether'
 import { toggleBgMusic, isBgMusicPlaying, unlockAudio } from './audio'
 
+// ─── Texture Assets ───────────────────────────────────────────────────────────
+const TEXTURES = {
+  panelBg: 'assets/textures/ui_panel_bg.jpg',
+  headerBg: 'assets/textures/ui_header_bg.jpg'
+}
+
 // ─── Design Tokens & Theme ───────────────────────────────────────────────────
 const C = {
   // Backgrounds & Panels
-  bgBackdrop: Color4.create(0.02, 0.03, 0.07, 0.90),
-  cardBg: Color4.create(0.05, 0.07, 0.14, 0.98),
-  cardHeader: Color4.create(0.08, 0.11, 0.22, 1.0),
-  panelBg: Color4.create(0.03, 0.04, 0.09, 0.95),
-  subPanel: Color4.create(0.07, 0.09, 0.18, 0.92),
-  insetBg: Color4.create(0.02, 0.02, 0.05, 0.98),
+  bgBackdrop: Color4.create(0.01, 0.02, 0.05, 0.92),
+  cardBg: Color4.create(0.04, 0.06, 0.12, 0.98),
+  cardHeader: Color4.create(0.06, 0.09, 0.18, 1.0),
+  panelBg: Color4.create(0.03, 0.05, 0.10, 0.96),
+  subPanel: Color4.create(0.05, 0.08, 0.16, 0.94),
+  insetBg: Color4.create(0.01, 0.02, 0.04, 0.98),
 
-  // Accents
+  // Accents & Borders
   cyan: Color4.create(0.12, 0.85, 1.0, 1.0),
-  cyanDim: Color4.create(0.08, 0.32, 0.48, 1.0),
+  cyanDim: Color4.create(0.08, 0.28, 0.44, 1.0),
   cyanGlow: Color4.create(0.12, 0.85, 1.0, 0.25),
-  gold: Color4.create(1.0, 0.80, 0.15, 1.0),
-  goldDim: Color4.create(0.45, 0.35, 0.05, 1.0),
+  borderCyan: Color4.create(0.12, 0.85, 1.0, 0.45),
+  gold: Color4.create(1.0, 0.82, 0.15, 1.0),
+  goldDim: Color4.create(0.40, 0.32, 0.05, 1.0),
+  borderGold: Color4.create(1.0, 0.82, 0.15, 0.45),
   emerald: Color4.create(0.10, 0.95, 0.50, 1.0),
   emeraldDim: Color4.create(0.05, 0.35, 0.18, 1.0),
+  borderEmerald: Color4.create(0.10, 0.95, 0.50, 0.45),
   red: Color4.create(1.0, 0.22, 0.22, 1.0),
   redDark: Color4.create(0.35, 0.04, 0.04, 0.95),
-  orange: Color4.create(1.0, 0.50, 0.10, 1.0),
-  purple: Color4.create(0.70, 0.25, 1.0, 1.0),
+  orange: Color4.create(1.0, 0.52, 0.12, 1.0),
+  purple: Color4.create(0.72, 0.28, 1.0, 1.0),
+  borderPurple: Color4.create(0.72, 0.28, 1.0, 0.45),
 
   // Text colors
   textWhite: Color4.White(),
-  textDim: Color4.create(0.78, 0.84, 0.94, 1.0),
-  textMuted: Color4.create(0.50, 0.58, 0.70, 1.0),
+  textDim: Color4.create(0.80, 0.86, 0.95, 1.0),
+  textMuted: Color4.create(0.55, 0.63, 0.74, 1.0),
   transparent: Color4.create(0, 0, 0, 0)
 }
 
@@ -135,13 +145,13 @@ const StatBox = (props: { icon: string; label: string; value: string; color: Col
     uiTransform={{
       flexDirection: 'column',
       alignItems: 'center',
-      padding: { left: 16, right: 16, top: 10, bottom: 10 }
+      padding: { left: 18, right: 18, top: 10, bottom: 10 }
     }}
     uiBackground={{ color: C.panelBg }}
   >
     <UiEntity uiTransform={{ flexDirection: 'row', alignItems: 'center', margin: { bottom: 4 } }}>
-      <Icon src={props.icon} size={18} color={props.color} margin={{ right: 6 }} />
-      <Label value={props.label} fontSize={13} color={C.textMuted} font='sans-serif' />
+      <Icon src={props.icon} size={20} color={props.color} margin={{ right: 8 }} />
+      <Label value={props.label} fontSize={14} color={C.textMuted} font='sans-serif' />
     </UiEntity>
     <Label
       value={props.value}
@@ -156,7 +166,7 @@ const StatBox = (props: { icon: string; label: string; value: string; color: Col
 const VDivider = () => (
   <UiEntity
     uiTransform={{ width: 2, height: '75%', margin: { left: 4, right: 4 }, alignSelf: 'center' }}
-    uiBackground={{ color: Color4.create(0.15, 0.85, 1.0, 0.2) }}
+    uiBackground={{ color: Color4.create(0.15, 0.85, 1.0, 0.25) }}
   />
 )
 
@@ -174,47 +184,50 @@ const LeaderboardModal = () => (
   >
     <UiEntity
       uiTransform={{
-        width: 620,
+        width: 640,
         flexDirection: 'column',
         alignItems: 'center'
       }}
       uiBackground={{ color: C.cardBg }}
     >
-      {/* Header */}
+      {/* Textured Header */}
       <UiEntity
         uiTransform={{
           width: '100%',
           flexDirection: 'column',
           alignItems: 'center',
-          padding: { top: 20, bottom: 14, left: 20, right: 20 }
+          padding: { top: 22, bottom: 16, left: 24, right: 24 }
         }}
-        uiBackground={{ color: C.cardHeader }}
+        uiBackground={{
+          texture: { src: TEXTURES.headerBg },
+          textureMode: 'stretch'
+        }}
       >
         <UiEntity uiTransform={{ flexDirection: 'row', alignItems: 'center', margin: { bottom: 4 } }}>
-          <Icon src='assets/icons/crown.png' size={32} color={C.gold} margin={{ right: 10 }} />
-          <Label value='SQUAD LEADERBOARD' fontSize={32} color={C.gold} font='sans-serif' />
+          <Icon src='assets/icons/crown.png' size={34} color={C.gold} margin={{ right: 12 }} />
+          <Label value='SQUAD LEADERBOARD' fontSize={34} color={C.gold} font='sans-serif' />
         </UiEntity>
         <Label
           value='ALL-TIME CO-OP SURVIVAL & ALTITUDE RECORDS'
-          fontSize={14}
-          color={C.textMuted}
+          fontSize={15}
+          color={C.textDim}
           font='sans-serif'
         />
         {/* Tab switcher */}
-        <UiEntity uiTransform={{ flexDirection: 'row', margin: { top: 12 } }}>
+        <UiEntity uiTransform={{ flexDirection: 'row', margin: { top: 14 } }}>
           <UiEntity
-            uiTransform={{ width: 140, height: 34, alignItems: 'center', justifyContent: 'center', margin: { right: 8 } }}
+            uiTransform={{ width: 150, height: 38, alignItems: 'center', justifyContent: 'center', margin: { right: 10 } }}
             uiBackground={{ color: uiState.leaderboardTab === 'squad' ? C.cyan : C.cyanDim }}
             onMouseDown={() => { uiState.leaderboardTab = 'squad' }}
           >
-            <Label value='⛓ SQUAD' fontSize={13} color={uiState.leaderboardTab === 'squad' ? C.insetBg : C.textWhite} font='sans-serif' />
+            <Label value='⛓ SQUAD' fontSize={15} color={uiState.leaderboardTab === 'squad' ? C.insetBg : C.textWhite} font='sans-serif' />
           </UiEntity>
           <UiEntity
-            uiTransform={{ width: 140, height: 34, alignItems: 'center', justifyContent: 'center' }}
+            uiTransform={{ width: 150, height: 38, alignItems: 'center', justifyContent: 'center' }}
             uiBackground={{ color: uiState.leaderboardTab === 'solo' ? C.purple : Color4.create(0.20, 0.10, 0.30, 1.0) }}
             onMouseDown={() => { uiState.leaderboardTab = 'solo' }}
           >
-            <Label value='🤖 SOLO' fontSize={13} color={uiState.leaderboardTab === 'solo' ? C.textWhite : C.textMuted} font='sans-serif' />
+            <Label value='🤖 SOLO' fontSize={15} color={uiState.leaderboardTab === 'solo' ? C.textWhite : C.textMuted} font='sans-serif' />
           </UiEntity>
         </UiEntity>
       </UiEntity>
@@ -260,20 +273,21 @@ const LeaderboardModal = () => (
                     key={`modal-lb-${i}`}
                     uiTransform={{
                       width: '100%',
+                      height: 44,
                       flexDirection: 'row',
                       justifyContent: 'space-between',
                       alignItems: 'center',
-                      padding: { top: 8, bottom: 8, left: 8, right: 8 }
+                      padding: { top: 8, bottom: 8, left: 10, right: 10 }
                     }}
-                    uiBackground={{ color: i % 2 === 1 ? Color4.create(0.08, 0.12, 0.22, 0.45) : C.transparent }}
+                    uiBackground={{ color: i % 2 === 1 ? Color4.create(0.08, 0.12, 0.22, 0.55) : C.transparent }}
                   >
                     <UiEntity uiTransform={{ flexDirection: 'row', alignItems: 'center' }}>
-                      <Icon src={medalIcon} size={20} color={entryColor} margin={{ right: 10 }} />
-                      <Label value={`#${i + 1}  ${entry.displayName}`} fontSize={16} color={entryColor} font='sans-serif' />
+                      <Icon src={medalIcon} size={22} color={entryColor} margin={{ right: 10 }} />
+                      <Label value={`#${i + 1}  ${entry.displayName}`} fontSize={17} color={entryColor} font='sans-serif' />
                     </UiEntity>
                     <Label
                       value={`${entry.teamScore} PTS  (${entry.maxAltitude}M)`}
-                      fontSize={16}
+                      fontSize={17}
                       color={i === 0 ? C.gold : C.textDim}
                       font='monospace'
                     />
@@ -298,17 +312,18 @@ const LeaderboardModal = () => (
                     key={`solo-lb-${i}`}
                     uiTransform={{
                       width: '100%',
+                      height: 44,
                       flexDirection: 'row',
                       justifyContent: 'space-between',
                       alignItems: 'center',
-                      padding: { top: 8, bottom: 8, left: 8, right: 8 }
+                      padding: { top: 8, bottom: 8, left: 10, right: 10 }
                     }}
-                    uiBackground={{ color: i % 2 === 1 ? Color4.create(0.12, 0.06, 0.22, 0.45) : C.transparent }}
+                    uiBackground={{ color: i % 2 === 1 ? Color4.create(0.12, 0.06, 0.22, 0.55) : C.transparent }}
                   >
-                    <Label value={`#${i + 1}  ${entry.displayName}`} fontSize={16} color={entryColor} font='sans-serif' />
+                    <Label value={`#${i + 1}  ${entry.displayName}`} fontSize={17} color={entryColor} font='sans-serif' />
                     <Label
                       value={`${entry.soloScore} PTS  (${entry.maxAltitude}M)`}
-                      fontSize={16}
+                      fontSize={17}
                       color={i === 0 ? C.purple : C.textDim}
                       font='monospace'
                     />
@@ -323,7 +338,7 @@ const LeaderboardModal = () => (
         <UiEntity
           uiTransform={{
             width: '100%',
-            height: 54,
+            height: 56,
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'center'
@@ -333,8 +348,8 @@ const LeaderboardModal = () => (
             uiState.showLeaderboardModal = false
           }}
         >
-          <Icon src='assets/icons/x.png' size={20} color={C.insetBg} margin={{ right: 10 }} />
-          <Label value='CLOSE LEADERBOARD' fontSize={17} color={C.insetBg} font='sans-serif' />
+          <Icon src='assets/icons/x.png' size={22} color={C.insetBg} margin={{ right: 10 }} />
+          <Label value='CLOSE LEADERBOARD' fontSize={18} color={C.insetBg} font='sans-serif' />
         </UiEntity>
       </UiEntity>
     </UiEntity>
@@ -355,30 +370,33 @@ const HowToPlayModal = () => (
   >
     <UiEntity
       uiTransform={{
-        width: 620,
+        width: 640,
         flexDirection: 'column',
         alignItems: 'center'
       }}
       uiBackground={{ color: C.cardBg }}
     >
-      {/* Header */}
+      {/* Textured Header */}
       <UiEntity
         uiTransform={{
           width: '100%',
           flexDirection: 'column',
           alignItems: 'center',
-          padding: { top: 22, bottom: 16, left: 20, right: 20 }
+          padding: { top: 24, bottom: 18, left: 24, right: 24 }
         }}
-        uiBackground={{ color: C.cardHeader }}
+        uiBackground={{
+          texture: { src: TEXTURES.headerBg },
+          textureMode: 'stretch'
+        }}
       >
         <UiEntity uiTransform={{ flexDirection: 'row', alignItems: 'center', margin: { bottom: 4 } }}>
-          <Icon src='assets/icons/info.png' size={28} color={C.cyan} margin={{ right: 10 }} />
-          <Label value='HOW TO PLAY CHAINMATES' fontSize={26} color={C.cyan} font='sans-serif' />
+          <Icon src='assets/icons/info.png' size={32} color={C.cyan} margin={{ right: 12 }} />
+          <Label value='HOW TO PLAY CHAINMATES' fontSize={30} color={C.cyan} font='sans-serif' />
         </UiEntity>
         <Label
           value='MASTER CO-OP CLIMBING & OUTRUN THE ELECTRIC VOID'
-          fontSize={13}
-          color={C.textMuted}
+          fontSize={15}
+          color={C.textDim}
           font='sans-serif'
         />
       </UiEntity>
@@ -388,7 +406,7 @@ const HowToPlayModal = () => (
         uiTransform={{
           width: '100%',
           flexDirection: 'column',
-          padding: { left: 20, right: 20, top: 16, bottom: 20 }
+          padding: { left: 24, right: 24, top: 18, bottom: 22 }
         }}
       >
         {/* Step 1 */}
@@ -397,17 +415,17 @@ const HowToPlayModal = () => (
             width: '100%',
             flexDirection: 'row',
             alignItems: 'center',
-            padding: { left: 14, right: 14, top: 12, bottom: 12 },
-            margin: { bottom: 10 }
+            padding: { left: 16, right: 16, top: 14, bottom: 14 },
+            margin: { bottom: 12 }
           }}
           uiBackground={{ color: C.panelBg }}
         >
-          <Icon src='assets/icons/users.png' size={28} color={C.emerald} margin={{ right: 14 }} />
+          <Icon src='assets/icons/users.png' size={32} color={C.emerald} margin={{ right: 16 }} />
           <UiEntity uiTransform={{ flexDirection: 'column', width: '85%' }}>
-            <Label value='1. PAIR UP OR PRACTICE SOLO' fontSize={15} color={C.emerald} font='sans-serif' />
+            <Label value='1. PAIR UP OR PRACTICE SOLO' fontSize={17} color={C.emerald} font='sans-serif' />
             <Label
               value='Invite any player in the lounge to form a tether squad, or tap SOLO PRACTICE to climb with the AI Ball Droid.'
-              fontSize={13}
+              fontSize={15}
               color={C.textDim}
               font='sans-serif'
             />
@@ -420,17 +438,17 @@ const HowToPlayModal = () => (
             width: '100%',
             flexDirection: 'row',
             alignItems: 'center',
-            padding: { left: 14, right: 14, top: 12, bottom: 12 },
-            margin: { bottom: 10 }
+            padding: { left: 16, right: 16, top: 14, bottom: 14 },
+            margin: { bottom: 12 }
           }}
           uiBackground={{ color: C.panelBg }}
         >
-          <Icon src='assets/icons/link.png' size={28} color={C.gold} margin={{ right: 14 }} />
+          <Icon src='assets/icons/link.png' size={32} color={C.gold} margin={{ right: 16 }} />
           <UiEntity uiTransform={{ flexDirection: 'column', width: '85%' }}>
-            <Label value={`2. RESPECT THE ${MAX_CHAIN_LENGTH.toFixed(1)}M TETHER`} fontSize={15} color={C.gold} font='sans-serif' />
+            <Label value={`2. RESPECT THE ${MAX_CHAIN_LENGTH.toFixed(1)}M TETHER`} fontSize={17} color={C.gold} font='sans-serif' />
             <Label
               value={`You are physically chained! Coordinate jumps across oscillating platforms. Exceeding ${MAX_CHAIN_LENGTH.toFixed(1)}m triggers an elastic yank.`}
-              fontSize={13}
+              fontSize={15}
               color={C.textDim}
               font='sans-serif'
             />
@@ -443,17 +461,17 @@ const HowToPlayModal = () => (
             width: '100%',
             flexDirection: 'row',
             alignItems: 'center',
-            padding: { left: 14, right: 14, top: 12, bottom: 12 },
-            margin: { bottom: 16 }
+            padding: { left: 16, right: 16, top: 14, bottom: 14 },
+            margin: { bottom: 18 }
           }}
           uiBackground={{ color: C.panelBg }}
         >
-          <Icon src='assets/icons/zap.png' size={28} color={C.purple} margin={{ right: 14 }} />
+          <Icon src='assets/icons/zap.png' size={32} color={C.purple} margin={{ right: 16 }} />
           <UiEntity uiTransform={{ flexDirection: 'column', width: '85%' }}>
-            <Label value='3. ESCAPE THE ELECTRIC VOID' fontSize={15} color={C.purple} font='sans-serif' />
+            <Label value='3. ESCAPE THE ELECTRIC VOID' fontSize={17} color={C.purple} font='sans-serif' />
             <Label
               value='Molten void energy accelerates upward as you climb. Falling into the void ends your run and posts your team score.'
-              fontSize={13}
+              fontSize={15}
               color={C.textDim}
               font='sans-serif'
             />
@@ -464,7 +482,7 @@ const HowToPlayModal = () => (
         <UiEntity
           uiTransform={{
             width: '100%',
-            height: 52,
+            height: 56,
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'center'
@@ -474,8 +492,8 @@ const HowToPlayModal = () => (
             uiState.showHowToPlayModal = false
           }}
         >
-          <Icon src='assets/icons/play.png' size={18} color={C.insetBg} margin={{ right: 8 }} />
-          <Label value="GOT IT — LET'S CLIMB!" fontSize={16} color={C.insetBg} font='sans-serif' />
+          <Icon src='assets/icons/play.png' size={20} color={C.insetBg} margin={{ right: 10 }} />
+          <Label value="GOT IT — LET'S CLIMB!" fontSize={18} color={C.insetBg} font='sans-serif' />
         </UiEntity>
       </UiEntity>
     </UiEntity>
@@ -500,30 +518,33 @@ const LobbyScreen = () => {
       {/* Central Modal Card */}
       <UiEntity
         uiTransform={{
-          width: 620,
+          width: 640,
           flexDirection: 'column',
           alignItems: 'center'
         }}
         uiBackground={{ color: C.cardBg }}
       >
-        {/* Card Header */}
+        {/* Textured Header */}
         <UiEntity
           uiTransform={{
             width: '100%',
             flexDirection: 'column',
             alignItems: 'center',
-            padding: { top: 20, bottom: 16, left: 20, right: 20 }
+            padding: { top: 22, bottom: 18, left: 24, right: 24 }
           }}
-          uiBackground={{ color: C.cardHeader }}
+          uiBackground={{
+            texture: { src: TEXTURES.headerBg },
+            textureMode: 'stretch'
+          }}
         >
           <UiEntity uiTransform={{ flexDirection: 'row', alignItems: 'center', margin: { bottom: 4 } }}>
-            <Icon src='assets/icons/link.png' size={32} color={C.cyan} margin={{ right: 10 }} />
-            <Label value='CHAINMATES' fontSize={36} color={C.cyan} font='sans-serif' />
+            <Icon src='assets/icons/link.png' size={36} color={C.cyan} margin={{ right: 12 }} />
+            <Label value='CHAINMATES' fontSize={40} color={C.cyan} font='sans-serif' />
           </UiEntity>
           <Label
             value='CO-OP ENDLESS CLIMB // SQUAD HAVEN'
-            fontSize={14}
-            color={C.textMuted}
+            fontSize={20}
+            color={C.textDim}
             font='sans-serif'
           />
         </UiEntity>
@@ -550,19 +571,19 @@ const LobbyScreen = () => {
               uiBackground={{ color: Color4.create(0.04, 0.28, 0.14, 0.98) }}
             >
               <UiEntity uiTransform={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Icon src='assets/icons/bell.png' size={24} color={C.emerald} margin={{ right: 12 }} />
+                <Icon src='assets/icons/bell.png' size={26} color={C.emerald} margin={{ right: 12 }} />
                 <UiEntity uiTransform={{ flexDirection: 'column' }}>
-                  <Label value='SQUAD INVITATION' fontSize={12} color={C.emerald} font='sans-serif' />
-                  <Label value={`from ${gameState.pendingInvite.fromName}`} fontSize={17} color={C.textWhite} font='sans-serif' />
+                  <Label value='SQUAD INVITATION' fontSize={13} color={C.emerald} font='sans-serif' />
+                  <Label value={`from ${gameState.pendingInvite.fromName}`} fontSize={18} color={C.textWhite} font='sans-serif' />
                 </UiEntity>
               </UiEntity>
 
               <Button
                 value='ACCEPT'
                 variant='primary'
-                uiTransform={{ width: 120, height: 44 }}
+                uiTransform={{ width: 124, height: 46 }}
                 uiBackground={{ color: C.emerald }}
-                fontSize={15}
+                fontSize={16}
                 color={C.insetBg}
                 onMouseDown={() => acceptTether(gameState.pendingInvite!.fromId)}
               />
@@ -583,12 +604,12 @@ const LobbyScreen = () => {
               uiBackground={{ color: Color4.create(0.04, 0.22, 0.12, 0.95) }}
             >
               <UiEntity uiTransform={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Icon src='assets/icons/link.png' size={26} color={C.emerald} margin={{ right: 12 }} />
+                <Icon src='assets/icons/link.png' size={28} color={C.emerald} margin={{ right: 12 }} />
                 <UiEntity uiTransform={{ flexDirection: 'column' }}>
-                  <Label value='SQUAD LINKED' fontSize={12} color={C.emerald} font='sans-serif' />
+                  <Label value='SQUAD LINKED' fontSize={13} color={C.emerald} font='sans-serif' />
                   <Label
                     value={`${gameState.localName} & ${gameState.partnerName}`}
-                    fontSize={18}
+                    fontSize={19}
                     color={C.textWhite}
                     font='sans-serif'
                   />
@@ -598,9 +619,9 @@ const LobbyScreen = () => {
               <Button
                 value='DISCONNECT'
                 variant='primary'
-                uiTransform={{ width: 130, height: 42 }}
+                uiTransform={{ width: 130, height: 44 }}
                 uiBackground={{ color: C.red }}
-                fontSize={14}
+                fontSize={15}
                 color={C.textWhite}
                 onMouseDown={leaveSquad}
               />
@@ -616,14 +637,14 @@ const LobbyScreen = () => {
               uiBackground={{ color: C.panelBg }}
             >
               <UiEntity uiTransform={{ flexDirection: 'row', alignItems: 'center', margin: { bottom: 10 } }}>
-                <Icon src='assets/icons/users.png' size={18} color={C.cyan} margin={{ right: 8 }} />
+                <Icon src='assets/icons/users.png' size={20} color={C.cyan} margin={{ right: 8 }} />
                 <Label
                   value={
                     gameState.outgoingInviteTo
                       ? `INVITE SENT: WAITING FOR ${gameState.outgoingInviteTo.name.toUpperCase()}...`
                       : 'AVAILABLE CLIMBERS IN SCENE'
                   }
-                  fontSize={13}
+                  fontSize={14}
                   color={gameState.outgoingInviteTo ? C.gold : C.cyan}
                   font='sans-serif'
                 />
@@ -632,7 +653,7 @@ const LobbyScreen = () => {
               {availablePlayers.length === 0 ? (
                 <Label
                   value='No other players nearby. Waiting for climbers to enter scene...'
-                  fontSize={14}
+                  fontSize={15}
                   color={C.textMuted}
                   font='sans-serif'
                   uiTransform={{ margin: { top: 6, bottom: 6 } }}
@@ -645,22 +666,23 @@ const LobbyScreen = () => {
                       key={`p-${p.id}`}
                       uiTransform={{
                         width: '100%',
+                        height: 48,
                         flexDirection: 'row',
                         justifyContent: 'space-between',
                         alignItems: 'center',
-                        padding: { top: 6, bottom: 6 }
+                        padding: { top: 4, bottom: 4 }
                       }}
                     >
                       <UiEntity uiTransform={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <Icon src='assets/icons/user.png' size={18} color={C.textDim} margin={{ right: 10 }} />
-                        <Label value={p.displayName} fontSize={16} color={C.textWhite} font='sans-serif' />
+                        <Icon src='assets/icons/user.png' size={20} color={C.textDim} margin={{ right: 10 }} />
+                        <Label value={p.displayName} fontSize={17} color={C.textWhite} font='sans-serif' />
                       </UiEntity>
                       <Button
                         value={invited ? 'INVITED...' : 'LINK TETHER'}
                         variant='primary'
-                        uiTransform={{ width: 130, height: 40 }}
+                        uiTransform={{ width: 130, height: 42 }}
                         uiBackground={{ color: invited ? C.cyanDim : C.cyan }}
-                        fontSize={13}
+                        fontSize={14}
                         color={invited ? C.textMuted : C.insetBg}
                         onMouseDown={() => requestTether(p.id)}
                       />
@@ -674,7 +696,7 @@ const LobbyScreen = () => {
           {/* Tether Skin Selector */}
           <UiEntity uiTransform={{ flexDirection: 'row', alignItems: 'center', margin: { bottom: 8 } }}>
             <Icon src='assets/icons/palette.png' size={18} color={C.textMuted} margin={{ right: 8 }} />
-            <Label value='TETHER MATERIAL' fontSize={13} color={C.textMuted} font='sans-serif' />
+            <Label value='TETHER MATERIAL' fontSize={14} color={C.textMuted} font='sans-serif' />
           </UiEntity>
 
           <UiEntity
@@ -694,7 +716,7 @@ const LobbyScreen = () => {
                 key={`skin-${s.idx}`}
                 uiTransform={{
                   width: 180,
-                  height: 48,
+                  height: 50,
                   flexDirection: 'row',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -709,12 +731,12 @@ const LobbyScreen = () => {
               >
                 {/* Color swatch dot */}
                 <UiEntity
-                  uiTransform={{ width: 12, height: 12, margin: { right: 6 } }}
+                  uiTransform={{ width: 14, height: 14, margin: { right: 8 } }}
                   uiBackground={{ color: s.swatch }}
                 />
                 <Label
                   value={s.label}
-                  fontSize={14}
+                  fontSize={15}
                   color={uiState.selectedSkin === s.idx ? C.insetBg : C.textWhite}
                   font='sans-serif'
                 />
@@ -728,15 +750,15 @@ const LobbyScreen = () => {
               width: '100%',
               flexDirection: 'row',
               alignItems: 'center',
-              padding: { left: 14, right: 14, top: 8, bottom: 8 },
-              margin: { bottom: 16 }
+              padding: { left: 16, right: 16, top: 10, bottom: 10 },
+              margin: { bottom: 18 }
             }}
             uiBackground={{ color: C.subPanel }}
           >
-            <Icon src='assets/icons/info.png' size={18} color={C.gold} margin={{ right: 8 }} />
+            <Icon src='assets/icons/info.png' size={20} color={C.gold} margin={{ right: 10 }} />
             <Label
               value={`Max chain reach is ${MAX_CHAIN_LENGTH.toFixed(1)}m. Coordinate jumps to prevent yanks & avoid the rising void!`}
-              fontSize={13}
+              fontSize={14}
               color={C.textDim}
               font='sans-serif'
             />
@@ -763,7 +785,7 @@ const LobbyScreen = () => {
               <UiEntity
                 uiTransform={{
                   width: '38%',
-                  height: 48,
+                  height: 50,
                   flexDirection: 'row',
                   alignItems: 'center',
                   justifyContent: 'center'
@@ -773,15 +795,15 @@ const LobbyScreen = () => {
                   uiState.showLeaderboardModal = true
                 }}
               >
-                <Icon src='assets/icons/crown.png' size={18} color={C.gold} margin={{ right: 6 }} />
-                <Label value='LEADERBOARD' fontSize={13} color={C.gold} font='sans-serif' />
+                <Icon src='assets/icons/crown.png' size={20} color={C.gold} margin={{ right: 8 }} />
+                <Label value='LEADERBOARD' fontSize={14} color={C.gold} font='sans-serif' />
               </UiEntity>
 
               {/* How To Play Button */}
               <UiEntity
                 uiTransform={{
                   width: '34%',
-                  height: 48,
+                  height: 50,
                   flexDirection: 'row',
                   alignItems: 'center',
                   justifyContent: 'center'
@@ -792,15 +814,15 @@ const LobbyScreen = () => {
                   uiState.showHowToPlayModal = true
                 }}
               >
-                <Icon src='assets/icons/info.png' size={16} color={C.cyan} margin={{ right: 6 }} />
-                <Label value='GUIDE' fontSize={13} color={C.cyan} font='sans-serif' />
+                <Icon src='assets/icons/info.png' size={18} color={C.cyan} margin={{ right: 8 }} />
+                <Label value='GUIDE' fontSize={14} color={C.cyan} font='sans-serif' />
               </UiEntity>
 
               {/* Music Toggle Button */}
               <UiEntity
                 uiTransform={{
                   width: '24%',
-                  height: 48,
+                  height: 50,
                   flexDirection: 'row',
                   alignItems: 'center',
                   justifyContent: 'center'
@@ -812,13 +834,13 @@ const LobbyScreen = () => {
               >
                 <Icon
                   src={uiState.musicEnabled ? 'assets/icons/music.png' : 'assets/icons/music-off.png'}
-                  size={18}
+                  size={20}
                   color={uiState.musicEnabled ? C.emerald : C.textMuted}
-                  margin={{ right: 6 }}
+                  margin={{ right: 8 }}
                 />
                 <Label
                   value={uiState.musicEnabled ? 'ON' : 'OFF'}
-                  fontSize={13}
+                  fontSize={14}
                   color={uiState.musicEnabled ? C.emerald : C.textMuted}
                   font='sans-serif'
                 />
@@ -835,9 +857,9 @@ const LobbyScreen = () => {
                     : 'LINK WITH A PARTNER TO CLIMB'
               }
               variant='primary'
-              uiTransform={{ width: '100%', height: 58, margin: { bottom: 10 } }}
+              uiTransform={{ width: '100%', height: 62, margin: { bottom: 12 } }}
               uiBackground={{ color: isPaired ? C.emerald : Color4.create(0.16, 0.20, 0.30, 0.6) }}
-              fontSize={18}
+              fontSize={20}
               color={isPaired ? C.insetBg : C.textMuted}
               onMouseDown={() => {
                 unlockAudio()
@@ -849,7 +871,7 @@ const LobbyScreen = () => {
             <UiEntity
               uiTransform={{
                 width: '100%',
-                height: 50,
+                height: 52,
                 flexDirection: 'row',
                 alignItems: 'center',
                 justifyContent: 'center'
@@ -860,8 +882,8 @@ const LobbyScreen = () => {
                 startPractice()
               }}
             >
-              <Icon src='assets/icons/user.png' size={18} color={C.purple} margin={{ right: 10 }} />
-              <Label value='SOLO PRACTICE RUN' fontSize={16} color={C.purple} font='sans-serif' />
+              <Icon src='assets/icons/user.png' size={20} color={C.purple} margin={{ right: 10 }} />
+              <Label value='SOLO PRACTICE RUN' fontSize={17} color={C.purple} font='sans-serif' />
             </UiEntity>
           </UiEntity>
         </UiEntity>
@@ -885,32 +907,32 @@ const CountdownScreen = () => (
       uiTransform={{
         flexDirection: 'column',
         alignItems: 'center',
-        padding: { left: 70, right: 70, top: 36, bottom: 36 }
+        padding: { left: 80, right: 80, top: 40, bottom: 40 }
       }}
       uiBackground={{ color: C.cardBg }}
     >
-      <Label value='GET READY TO CLIMB' fontSize={18} color={C.textMuted} font='sans-serif' uiTransform={{ margin: { bottom: 6 } }} />
+      <Label value='GET READY TO CLIMB' fontSize={20} color={C.textMuted} font='sans-serif' uiTransform={{ margin: { bottom: 8 } }} />
       <Label
         value={uiState.countdown > 0 ? `${uiState.countdown}` : 'CLIMB!'}
-        fontSize={uiState.countdown > 0 ? 120 : 72}
+        fontSize={uiState.countdown > 0 ? 128 : 76}
         color={uiState.countdown > 0 ? C.gold : C.emerald}
         font='sans-serif'
       />
-      <UiEntity uiTransform={{ flexDirection: 'row', alignItems: 'center', margin: { top: 12 } }}>
-        <Icon src='assets/icons/flame.png' size={22} color={C.orange} margin={{ right: 8 }} />
+      <UiEntity uiTransform={{ flexDirection: 'row', alignItems: 'center', margin: { top: 14 } }}>
+        <Icon src='assets/icons/flame.png' size={24} color={C.orange} margin={{ right: 10 }} />
         <Label
           value='VOID IS RISING — STAY CHAINED & ASCEND!'
-          fontSize={16}
+          fontSize={18}
           color={C.orange}
           font='sans-serif'
         />
       </UiEntity>
       {gameState.partnerName !== '' && (
-        <UiEntity uiTransform={{ flexDirection: 'row', alignItems: 'center', margin: { top: 8 } }}>
-          <Icon src='assets/icons/link.png' size={18} color={C.textDim} margin={{ right: 8 }} />
+        <UiEntity uiTransform={{ flexDirection: 'row', alignItems: 'center', margin: { top: 10 } }}>
+          <Icon src='assets/icons/link.png' size={20} color={C.textDim} margin={{ right: 8 }} />
           <Label
             value={`${gameState.localName} & ${gameState.partnerName}`}
-            fontSize={15}
+            fontSize={16}
             color={C.textDim}
             font='sans-serif'
           />
@@ -1023,7 +1045,7 @@ const RunningHud = () => {
         uiTransform={{
           flexDirection: 'row',
           alignItems: 'stretch',
-          padding: { left: 6, right: 6, top: 6, bottom: 6 }
+          padding: { left: 8, right: 8, top: 6, bottom: 6 }
         }}
         uiBackground={{ color: C.cardBg }}
       >
@@ -1031,37 +1053,10 @@ const RunningHud = () => {
         <VDivider />
         <StatBox icon='assets/icons/mountain.png' label='ALTITUDE' value={`${gameState.currentAltitude} M`} color={C.cyan} isMono={true} />
         <VDivider />
-        {/* <StatBox
-          icon='assets/icons/flame.png'
-          label='VOID GAP'
-          value={`${lavaDist.toFixed(1)}m ↑${gameState.lavaSpeed.toFixed(2)}`}
-          color={lavaNear ? C.red : C.purple}
-          isMono={true}
-        /> */}
-        {/* <VDivider /> */}
         <StatBox icon='assets/icons/star.png' label='GEMS' value={`💎 ${gameState.gemsCollected || 0}`} color={C.emerald} isMono={true} />
         <VDivider />
         <StatBox icon='assets/icons/clock.png' label='TIME' value={uiState.elapsedFormatted} color={C.textWhite} isMono={true} />
       </UiEntity>
-
-      {/* Tension Status Pill */}
-      {/* <UiEntity
-        uiTransform={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          padding: { left: 18, right: 18, top: 6, bottom: 6 },
-          margin: { top: 8 }
-        }}
-        uiBackground={{ color: tensionInfo.bg }}
-      >
-        <Icon src={tensionInfo.icon} size={18} color={tensionInfo.color} margin={{ right: 8 }} />
-        <Label
-          value={`${tensionInfo.label}  [${tetherState.distanceToPartner.toFixed(1)}m / ${MAX_CHAIN_LENGTH.toFixed(1)}m]`}
-          fontSize={15}
-          color={tensionInfo.color}
-          font='sans-serif'
-        />
-      </UiEntity> */}
 
       {/* Yank Danger Flash Banner with High-Contrast Alert */}
       {uiState.yankFlash && (
@@ -1069,13 +1064,13 @@ const RunningHud = () => {
           uiTransform={{
             flexDirection: 'row',
             alignItems: 'center',
-            padding: { left: 24, right: 24, top: 10, bottom: 10 },
-            margin: { top: 8 }
+            padding: { left: 28, right: 28, top: 12, bottom: 12 },
+            margin: { top: 10 }
           }}
-          uiBackground={{ color: Color4.create(0.85, 0.08, 0.15, 0.95) }}
+          uiBackground={{ color: Color4.create(0.88, 0.08, 0.15, 0.98) }}
         >
-          <Icon src='assets/icons/zap.png' size={22} color={C.textWhite} margin={{ right: 10 }} />
-          <Label value='⚡ TETHER OVERSTRETCHED // REGROUP & JUMP TOGETHER!' fontSize={16} color={C.textWhite} font='sans-serif' />
+          <Icon src='assets/icons/zap.png' size={24} color={C.textWhite} margin={{ right: 12 }} />
+          <Label value='⚡ TETHER OVERSTRETCHED // REGROUP & JUMP TOGETHER!' fontSize={17} color={C.textWhite} font='sans-serif' />
         </UiEntity>
       )}
 
@@ -1085,13 +1080,13 @@ const RunningHud = () => {
           uiTransform={{
             flexDirection: 'row',
             alignItems: 'center',
-            padding: { left: 20, right: 20, top: 8, bottom: 8 },
-            margin: { top: 8 }
+            padding: { left: 24, right: 24, top: 10, bottom: 10 },
+            margin: { top: 10 }
           }}
-          uiBackground={{ color: Color4.create(0.40, 0.06, 0.02, 0.96) }}
+          uiBackground={{ color: Color4.create(0.55, 0.08, 0.04, 0.98) }}
         >
-          <Icon src='assets/icons/flame.png' size={20} color={C.orange} margin={{ right: 8 }} />
-          <Label value='DANGER: VOID RISING // CLIMB HIGHER NOW!' fontSize={16} color={C.purple} font='sans-serif' />
+          <Icon src='assets/icons/flame.png' size={22} color={C.orange} margin={{ right: 10 }} />
+          <Label value='DANGER: VOID RISING // CLIMB HIGHER NOW!' fontSize={17} color={C.textWhite} font='sans-serif' />
         </UiEntity>
       )}
     </UiEntity>
@@ -1116,39 +1111,42 @@ const GameOverScreen = () => {
     >
       <UiEntity
         uiTransform={{
-          width: 620,
+          width: 640,
           flexDirection: 'column',
           alignItems: 'center'
         }}
         uiBackground={{ color: C.cardBg }}
       >
-        {/* Header */}
+        {/* Textured Header */}
         <UiEntity
           uiTransform={{
             width: '100%',
             flexDirection: 'column',
             alignItems: 'center',
-            padding: { top: 24, bottom: 18, left: 20, right: 20 }
+            padding: { top: 26, bottom: 20, left: 24, right: 24 }
           }}
-          uiBackground={{ color: isFinished ? Color4.create(0.04, 0.22, 0.12, 1.0) : C.redDark }}
+          uiBackground={{
+            texture: { src: TEXTURES.headerBg },
+            textureMode: 'stretch'
+          }}
         >
-          <UiEntity uiTransform={{ flexDirection: 'row', alignItems: 'center', margin: { bottom: 4 } }}>
+          <UiEntity uiTransform={{ flexDirection: 'row', alignItems: 'center', margin: { bottom: 6 } }}>
             <Icon
               src={isFinished ? 'assets/icons/trophy.png' : 'assets/icons/skull.png'}
-              size={32}
-              color={C.textWhite}
-              margin={{ right: 10 }}
+              size={36}
+              color={isFinished ? C.emerald : C.red}
+              margin={{ right: 12 }}
             />
             <Label
               value={isFinished ? 'CLIMB COMPLETED' : isSolo ? 'SOLO RUN OVER' : 'TEAM ELIMINATED'}
-              fontSize={32}
+              fontSize={34}
               color={isFinished ? C.emerald : C.red}
               font='sans-serif'
             />
           </UiEntity>
           <Label
             value={gameState.gameOverReason || (isSolo ? 'Solo run ended in the void' : 'Fell into the electric abyss')}
-            fontSize={15}
+            fontSize={16}
             color={C.textDim}
             font='sans-serif'
           />
@@ -1177,13 +1175,13 @@ const GameOverScreen = () => {
                 width: '48%',
                 flexDirection: 'column',
                 alignItems: 'center',
-                padding: { top: 16, bottom: 16 }
+                padding: { top: 18, bottom: 18 }
               }}
               uiBackground={{ color: C.panelBg }}
             >
-              <Icon src='assets/icons/trophy.png' size={32} color={C.gold} margin={{ bottom: 6 }} />
-              <Label value={isSolo ? 'SOLO SCORE' : 'FINAL SQUAD SCORE'} fontSize={13} color={C.textMuted} font='sans-serif' />
-              <Label value={`${gameState.finalScore} PTS`} fontSize={28} color={C.gold} font='monospace' />
+              <Icon src='assets/icons/trophy.png' size={34} color={C.gold} margin={{ bottom: 8 }} />
+              <Label value={isSolo ? 'SOLO SCORE' : 'FINAL SQUAD SCORE'} fontSize={14} color={C.textMuted} font='sans-serif' />
+              <Label value={`${gameState.finalScore} PTS`} fontSize={32} color={C.gold} font='monospace' />
             </UiEntity>
 
             {/* Stat: Max Altitude */}
@@ -1192,13 +1190,13 @@ const GameOverScreen = () => {
                 width: '48%',
                 flexDirection: 'column',
                 alignItems: 'center',
-                padding: { top: 16, bottom: 16 }
+                padding: { top: 18, bottom: 18 }
               }}
               uiBackground={{ color: C.panelBg }}
             >
-              <Icon src='assets/icons/mountain.png' size={32} color={C.cyan} margin={{ bottom: 6 }} />
-              <Label value='MAX ALTITUDE REACHED' fontSize={13} color={C.textMuted} font='sans-serif' />
-              <Label value={`${gameState.finalAltitude} M`} fontSize={28} color={C.cyan} font='monospace' />
+              <Icon src='assets/icons/mountain.png' size={34} color={C.cyan} margin={{ bottom: 8 }} />
+              <Label value='MAX ALTITUDE REACHED' fontSize={14} color={C.textMuted} font='sans-serif' />
+              <Label value={`${gameState.finalAltitude} M`} fontSize={32} color={C.cyan} font='monospace' />
             </UiEntity>
           </UiEntity>
 
@@ -1209,20 +1207,20 @@ const GameOverScreen = () => {
               flexDirection: 'row',
               justifyContent: 'space-between',
               alignItems: 'center',
-              padding: { left: 18, right: 18, top: 12, bottom: 12 },
+              padding: { left: 20, right: 20, top: 14, bottom: 14 },
               margin: { bottom: 16 }
             }}
             uiBackground={{ color: C.panelBg }}
           >
             <UiEntity uiTransform={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Icon src={tier.icon} size={26} color={tier.color} margin={{ right: 10 }} />
-              <Label value={tier.title} fontSize={16} color={tier.color} font='sans-serif' />
+              <Icon src={tier.icon} size={28} color={tier.color} margin={{ right: 12 }} />
+              <Label value={tier.title} fontSize={17} color={tier.color} font='sans-serif' />
             </UiEntity>
             <UiEntity
-              uiTransform={{ padding: { left: 12, right: 12, top: 6, bottom: 6 } }}
+              uiTransform={{ padding: { left: 14, right: 14, top: 6, bottom: 6 } }}
               uiBackground={{ color: C.insetBg }}
             >
-              <Label value={tier.badge} fontSize={13} color={C.textMuted} font='sans-serif' />
+              <Label value={tier.badge} fontSize={14} color={C.textMuted} font='sans-serif' />
             </UiEntity>
           </UiEntity>
 
@@ -1231,18 +1229,18 @@ const GameOverScreen = () => {
             uiTransform={{
               width: '100%',
               flexDirection: 'column',
-              padding: { left: 16, right: 16, top: 12, bottom: 12 },
+              padding: { left: 16, right: 16, top: 14, bottom: 14 },
               margin: { bottom: 20 }
             }}
             uiBackground={{ color: C.panelBg }}
           >
             <UiEntity uiTransform={{ flexDirection: 'row', alignItems: 'center', margin: { bottom: 10 } }}>
-              <Icon src='assets/icons/crown.png' size={18} color={C.gold} margin={{ right: 8 }} />
-              <Label value='TOP SQUAD CLIMBERS' fontSize={14} color={C.cyan} font='sans-serif' />
+              <Icon src='assets/icons/crown.png' size={20} color={C.gold} margin={{ right: 8 }} />
+              <Label value='TOP SQUAD CLIMBERS' fontSize={15} color={C.cyan} font='sans-serif' />
             </UiEntity>
 
             {uiState.leaderboard.length === 0 ? (
-              <Label value='No squad records yet. Set the first record!' fontSize={14} color={C.textMuted} font='sans-serif' />
+              <Label value='No squad records yet. Set the first record!' fontSize={15} color={C.textMuted} font='sans-serif' />
             ) : (
               uiState.leaderboard.slice(0, 4).map((entry, i) => {
                 const entryColor = i === 0 ? C.gold : C.textWhite
@@ -1257,20 +1255,21 @@ const GameOverScreen = () => {
                     key={`lb-${i}`}
                     uiTransform={{
                       width: '100%',
+                      height: 42,
                       flexDirection: 'row',
                       justifyContent: 'space-between',
                       alignItems: 'center',
-                      padding: { top: 6, bottom: 6, left: 6, right: 6 }
+                      padding: { top: 6, bottom: 6, left: 8, right: 8 }
                     }}
-                    uiBackground={{ color: i % 2 === 1 ? Color4.create(0.08, 0.12, 0.22, 0.45) : C.transparent }}
+                    uiBackground={{ color: i % 2 === 1 ? Color4.create(0.08, 0.12, 0.22, 0.55) : C.transparent }}
                   >
                     <UiEntity uiTransform={{ flexDirection: 'row', alignItems: 'center' }}>
-                      <Icon src={medalIcon} size={16} color={entryColor} margin={{ right: 8 }} />
-                      <Label value={entry.displayName} fontSize={15} color={entryColor} font='sans-serif' />
+                      <Icon src={medalIcon} size={18} color={entryColor} margin={{ right: 8 }} />
+                      <Label value={entry.displayName} fontSize={16} color={entryColor} font='sans-serif' />
                     </UiEntity>
                     <Label
                       value={`${entry.teamScore} PTS (${entry.maxAltitude}M)`}
-                      fontSize={15}
+                      fontSize={16}
                       color={i === 0 ? C.gold : C.textDim}
                       font='monospace'
                     />
@@ -1293,7 +1292,7 @@ const GameOverScreen = () => {
             <UiEntity
               uiTransform={{
                 width: '48%',
-                height: 54,
+                height: 56,
                 flexDirection: 'row',
                 alignItems: 'center',
                 justifyContent: 'center'
@@ -1301,15 +1300,15 @@ const GameOverScreen = () => {
               uiBackground={{ color: Color4.create(0.12, 0.16, 0.28, 0.95) }}
               onMouseDown={resetToLobby}
             >
-              <Icon src='assets/icons/users.png' size={20} color={C.textWhite} margin={{ right: 8 }} />
-              <Label value='MAIN MENU' fontSize={17} color={C.textWhite} font='sans-serif' />
+              <Icon src='assets/icons/users.png' size={22} color={C.textWhite} margin={{ right: 10 }} />
+              <Label value='MAIN MENU' fontSize={18} color={C.textWhite} font='sans-serif' />
             </UiEntity>
 
             {/* Rematch / Retry Button */}
             <UiEntity
               uiTransform={{
                 width: '48%',
-                height: 54,
+                height: 56,
                 flexDirection: 'row',
                 alignItems: 'center',
                 justifyContent: 'center'
@@ -1323,10 +1322,10 @@ const GameOverScreen = () => {
                 }
               }}
             >
-              <Icon src='assets/icons/refresh-cw.png' size={20} color={C.insetBg} margin={{ right: 8 }} />
+              <Icon src='assets/icons/refresh-cw.png' size={22} color={C.insetBg} margin={{ right: 10 }} />
               <Label
                 value={isSolo ? 'RETRY SOLO' : '⚡ REMATCH SQUAD'}
-                fontSize={17}
+                fontSize={18}
                 color={C.insetBg}
                 font='sans-serif'
               />

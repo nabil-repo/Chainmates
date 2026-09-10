@@ -119,6 +119,8 @@ export function main() {
       'assets/textures/Chain.png',
       'assets/textures/Rope.png',
       'assets/textures/Neon.png',
+      'assets/textures/ui_panel_bg.jpg',
+      'assets/textures/ui_header_bg.jpg',
       'assets/sounds/bg_music.mp3',
       'assets/sounds/gem.wav',
       'assets/sounds/yank.wav',
