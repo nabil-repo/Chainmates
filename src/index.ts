@@ -12,7 +12,8 @@
  *  - ui: React-DCL overlay UI
  */
 
-import { engine, executeTask, EngineInfo, AssetLoad } from '@dcl/sdk/ecs'
+import { engine, executeTask, EngineInfo, AssetLoad, inputSystem, InputAction, PointerEventType, Transform } from '@dcl/sdk/ecs'
+import { Vector3 } from '@dcl/sdk/math'
 
 import {
   gameState,
@@ -53,7 +54,7 @@ import {
   pushPersistentLeaderboard,
   serverHeartbeatSystem
 } from './serverLeaderboard'
-import { startBgMusic, playYankSound } from './audio'
+import { startBgMusic, playYankSound, unlockAudio } from './audio'
 
 // ─── Yank flash timer & UI throttle ──────────────────────────────────────────
 let yankFlashTimer = 0
@@ -131,6 +132,52 @@ export function main() {
   // 4. Warm up Render server & load persistent leaderboard & start music
   warmupServer()
   startBgMusic()
+
+  // Auto-unlock audio as soon as player interacts (bypasses browser autoplay & mobile touch constraints)
+  let audioUnlocked = false
+  let lastPlayerPos = Vector3.Zero()
+  let mobileTimer = 0
+  function audioAutoplayUnlockSystem(dt: number) {
+    if (audioUnlocked) return
+
+    // 1. Desktop / Keyboard / Gamepad input triggers
+    if (
+      inputSystem.isTriggered(InputAction.IA_ANY, PointerEventType.PET_DOWN) ||
+      inputSystem.isTriggered(InputAction.IA_POINTER, PointerEventType.PET_DOWN) ||
+      inputSystem.isTriggered(InputAction.IA_PRIMARY, PointerEventType.PET_DOWN) ||
+      inputSystem.isTriggered(InputAction.IA_SECONDARY, PointerEventType.PET_DOWN) ||
+      inputSystem.isTriggered(InputAction.IA_FORWARD, PointerEventType.PET_DOWN) ||
+      inputSystem.isTriggered(InputAction.IA_BACKWARD, PointerEventType.PET_DOWN) ||
+      inputSystem.isTriggered(InputAction.IA_JUMP, PointerEventType.PET_DOWN)
+    ) {
+      audioUnlocked = true
+      unlockAudio()
+      engine.removeSystem(audioAutoplayUnlockSystem)
+      return
+    }
+
+    // 2. Mobile Android Virtual Joystick: player moved from spawn
+    const playerT = Transform.getOrNull(engine.PlayerEntity)
+    if (playerT) {
+      if (lastPlayerPos.x === 0 && lastPlayerPos.y === 0 && lastPlayerPos.z === 0) {
+        lastPlayerPos = Vector3.clone(playerT.position)
+      } else if (Vector3.distance(playerT.position, lastPlayerPos) > 0.3) {
+        audioUnlocked = true
+        unlockAudio()
+        engine.removeSystem(audioAutoplayUnlockSystem)
+        return
+      }
+    }
+
+    // 3. Mobile fallback: once asset buffer has loaded (~2.5s), trigger audio
+    mobileTimer += dt
+    if (mobileTimer > 2.5) {
+      audioUnlocked = true
+      unlockAudio()
+      engine.removeSystem(audioAutoplayUnlockSystem)
+    }
+  }
+  engine.addSystem(audioAutoplayUnlockSystem, 1, 'AudioAutoplayUnlockSystem')
 
   // 5. Register all systems
   //    Priority: lower number = runs earlier

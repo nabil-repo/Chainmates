@@ -27,7 +27,7 @@ import {
   leaveSquad
 } from './gameState'
 import { setChainSkin, tetherState, MAX_CHAIN_LENGTH } from './tether'
-import { toggleBgMusic, isBgMusicPlaying } from './audio'
+import { toggleBgMusic, isBgMusicPlaying, unlockAudio } from './audio'
 
 // ─── Design Tokens & Theme ───────────────────────────────────────────────────
 const C = {
@@ -788,6 +788,7 @@ const LobbyScreen = () => {
                 }}
                 uiBackground={{ color: C.panelBg }}
                 onMouseDown={() => {
+                  unlockAudio()
                   uiState.showHowToPlayModal = true
                 }}
               >
@@ -839,6 +840,7 @@ const LobbyScreen = () => {
               fontSize={18}
               color={isPaired ? C.insetBg : C.textMuted}
               onMouseDown={() => {
+                unlockAudio()
                 if (isPaired) startRun()
               }}
             />
@@ -853,7 +855,10 @@ const LobbyScreen = () => {
                 justifyContent: 'center'
               }}
               uiBackground={{ color: Color4.create(0.10, 0.08, 0.22, 0.92) }}
-              onMouseDown={startPractice}
+              onMouseDown={() => {
+                unlockAudio()
+                startPractice()
+              }}
             >
               <Icon src='assets/icons/user.png' size={18} color={C.purple} margin={{ right: 10 }} />
               <Label value='SOLO PRACTICE RUN' fontSize={16} color={C.purple} font='sans-serif' />

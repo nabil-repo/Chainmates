@@ -14,7 +14,8 @@ function getSfxEntity() {
   if (!sfxEntity) {
     sfxEntity = engine.addEntity()
     Transform.create(sfxEntity, {
-      position: Vector3.create(8, 2, 8)
+      position: Vector3.create(0, 1.2, 0),
+      parent: engine.PlayerEntity
     })
   }
   return sfxEntity
@@ -24,11 +25,14 @@ function getMusicEntity() {
   if (!musicEntity) {
     musicEntity = engine.addEntity()
     Transform.create(musicEntity, {
-      position: Vector3.create(8, 6, 8)
+      position: Vector3.create(0, 1.2, 0),
+      parent: engine.PlayerEntity
     })
   }
   return musicEntity
 }
+
+let audioUnlocked = false
 
 // ─── Background Music ──────────────────────────────────────────────────────────
 
@@ -39,8 +43,9 @@ export function startBgMusic() {
   AudioSource.createOrReplace(e, {
     audioClipUrl: 'assets/sounds/bg_music.mp3',
     playing: true,
-    volume: 0.7,
-    loop: true
+    volume: 0.65,
+    loop: true,
+    global: true
   })
 }
 
@@ -51,13 +56,25 @@ export function stopBgMusic() {
   AudioSource.createOrReplace(e, {
     audioClipUrl: 'assets/sounds/bg_music.mp3',
     playing: false,
-    volume: 0.7,
-    loop: true
+    volume: 0.65,
+    loop: true,
+    global: true
   })
+}
+
+/** Called on first user interaction (click, keypress, button tap) to unlock browser autoplay */
+export function unlockAudio() {
+  if (!audioUnlocked) {
+    audioUnlocked = true
+    if (musicPlaying) {
+      startBgMusic()
+    }
+  }
 }
 
 /** Toggle background music on/off */
 export function toggleBgMusic(): boolean {
+  audioUnlocked = true
   if (musicPlaying) {
     stopBgMusic()
   } else {
@@ -79,7 +96,8 @@ export function playTickSound() {
     audioClipUrl: 'assets/sounds/tick.wav',
     playing: true,
     volume: 0.8,
-    loop: false
+    loop: false,
+    global: true
   })
 }
 
@@ -90,7 +108,8 @@ export function playGoSound() {
     audioClipUrl: 'assets/sounds/go.wav',
     playing: true,
     volume: 1.0,
-    loop: false
+    loop: false,
+    global: true
   })
 }
 
@@ -101,7 +120,8 @@ export function playYankSound() {
     audioClipUrl: 'assets/sounds/yank.wav',
     playing: true,
     volume: 0.9,
-    loop: false
+    loop: false,
+    global: true
   })
 }
 
@@ -112,7 +132,8 @@ export function playVoidFallSound() {
     audioClipUrl: 'assets/sounds/void_fall.wav',
     playing: true,
     volume: 1.0,
-    loop: false
+    loop: false,
+    global: true
   })
 }
 
@@ -123,7 +144,8 @@ export function playMilestoneSound() {
     audioClipUrl: 'assets/sounds/milestone.wav',
     playing: true,
     volume: 1.0,
-    loop: false
+    loop: false,
+    global: true
   })
 }
 
@@ -134,6 +156,7 @@ export function playGemSound() {
     audioClipUrl: 'assets/sounds/gem.wav',
     playing: true,
     volume: 0.95,
-    loop: false
+    loop: false,
+    global: true
   })
 }
