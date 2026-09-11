@@ -6,6 +6,13 @@
 
 ---
 
+## 🎮 Play Live World
+
+> 🌐 **Direct Play URL:** [https://decentraland.org/play/world/overlookhotel.dcl.eth](https://decentraland.org/play/world/overlookhotel.dcl.eth)  
+> Jump straight into the live Decentraland World instance on desktop or mobile browser!
+
+---
+
 ## 🎥 Official Gameplay Demo Video
 
 📺 **Watch on YouTube:** [https://youtu.be/2_w7LrtoAqk](https://youtu.be/2_w7LrtoAqk)  
@@ -85,6 +92,7 @@ npm run build
 ## 📋 Scene Metadata & Deployment Specs
 
 * **Scene Title:** `Chainmates — Endless Co-Op Climb`
+* **Live World URL:** [https://decentraland.org/play/world/overlookhotel.dcl.eth](https://decentraland.org/play/world/overlookhotel.dcl.eth)
 * **World Domain:** `OverlookHotel.dcl.eth`
 * **Base Parcel:** `0,0`
 * **Creator Address:** `0xad0d520fdae7b1ed9a41d2078dbf75a9c5b55129`

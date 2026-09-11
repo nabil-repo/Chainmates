@@ -1,15 +1,15 @@
-﻿<p align="center">
+<p align="center">
   <img src="assets/images/thumbnail.png" alt="Chainmates Logo" width="560" />
 </p>
 
 <h1 align="center">⛓️ Chainmates — Endless Co-Op Climb</h1>
 
 <p align="center">
-  <strong>A Mobile-First Co-Op Tether Climbing Experience for Decentraland</strong><br/>
-  Built for the <strong>Friendzone Mobile Buildathon 2026</strong> ($8,000 MANA Prize Pool).
+  <strong>A Mobile-First Co-Op Tether Climbing Experience for Decentraland</strong>
 </p>
 
 <p align="center">
+  <a href="https://decentraland.org/play/world/overlookhotel.dcl.eth"><img src="https://img.shields.io/badge/Play%20Live-OverlookHotel.dcl.eth-ff2d55?style=for-the-badge&logo=decentraland&logoColor=white" alt="Play Live World"/></a>
   <a href="https://docs.decentraland.org/creator/"><img src="https://img.shields.io/badge/DCL-SDK7-ff2d55?style=for-the-badge&logo=decentraland&logoColor=white" alt="DCL SDK7"/></a>
   <img src="https://img.shields.io/badge/Platform-Mobile%20First-00d2ff?style=for-the-badge&logo=android&logoColor=white" alt="Mobile First"/>
   <a href="https://chainmates.onrender.com/health"><img src="https://img.shields.io/badge/Backend-Render%20Live-00ff88?style=for-the-badge&logo=render&logoColor=white" alt="Live Server"/></a>
@@ -20,6 +20,7 @@
 
 ## 📑 Table of Contents
 
+- [🎮 Play Live World](#-play-live-world)
 - [🎥 Gameplay Demo Video](#-gameplay-demo-video)
 - [🌟 Project Overview](#-project-overview)
 - [🏆 What Makes Chainmates Unique](#-what-makes-chainmates-unique)
@@ -47,6 +48,13 @@
   - [Building for Production](#building-for-production)
 - [📋 Buildathon & Scene Specifications](#-buildathon--scene-specifications)
 - [📜 License](#-license)
+
+---
+
+## 🎮 Play Live World
+
+> 🌐 **Direct Play URL:** [https://decentraland.org/play/world/overlookhotel.dcl.eth](https://decentraland.org/play/world/overlookhotel.dcl.eth)  
+> Jump straight into the live Decentraland World instance on desktop or mobile browser to test solo AI droid climbing or 2-player co-op squad climbing!
 
 ---
 
@@ -354,6 +362,7 @@ npm run build
 ## 📋 Buildathon & Scene Specifications
 
 - **Competition**: Decentraland Friendzone Mobile Buildathon 2026
+- **Live World URL**: [https://decentraland.org/play/world/overlookhotel.dcl.eth](https://decentraland.org/play/world/overlookhotel.dcl.eth)
 - **World Name**: `OverlookHotel.dcl.eth`
 - **Parcel Footprint**: 1×1 Parcel (`0,0` — 16m × 16m)
 - **Vertical Reach**: 80+ Metres procedural climbing height
