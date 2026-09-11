@@ -6,6 +6,14 @@
 
 ---
 
+## 🎥 Official Gameplay Demo Video
+
+📺 **Watch on YouTube:** [https://youtu.be/2_w7LrtoAqk](https://youtu.be/2_w7LrtoAqk)  
+
+[![Chainmates Gameplay Demo Video](assets/images/thumbnail.png)](https://youtu.be/2_w7LrtoAqk)
+
+---
+
 ## 🕹️ Quick Testing Instructions for Judges & Players
 
 ### 🤝 2-Player Co-Op Duo Mode

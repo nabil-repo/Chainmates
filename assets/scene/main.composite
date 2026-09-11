@@ -116,7 +116,9 @@
       },
       "data": {
         "0": {
-          "json": {}
+          "json": {
+            "sceneInfoPanelVisible": true
+          }
         }
       }
     },

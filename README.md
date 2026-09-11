@@ -1,5 +1,5 @@
-<p align="center">
-  <img src="assets/logo.png" alt="Chainmates Logo" width="220" />
+﻿<p align="center">
+  <img src="assets/images/thumbnail.png" alt="Chainmates Logo" width="560" />
 </p>
 
 <h1 align="center">⛓️ Chainmates — Endless Co-Op Climb</h1>
@@ -13,11 +13,14 @@
   <a href="https://docs.decentraland.org/creator/"><img src="https://img.shields.io/badge/DCL-SDK7-ff2d55?style=for-the-badge&logo=decentraland&logoColor=white" alt="DCL SDK7"/></a>
   <img src="https://img.shields.io/badge/Platform-Mobile%20First-00d2ff?style=for-the-badge&logo=android&logoColor=white" alt="Mobile First"/>
   <a href="https://chainmates.onrender.com/health"><img src="https://img.shields.io/badge/Backend-Render%20Live-00ff88?style=for-the-badge&logo=render&logoColor=white" alt="Live Server"/></a>
+  <a href="https://youtu.be/2_w7LrtoAqk"><img src="https://img.shields.io/badge/YouTube-Demo%20Video-red?style=for-the-badge&logo=youtube&logoColor=white" alt="Demo Video"/></a>
   <img src="https://img.shields.io/badge/Multiplayer-DCL%20MessageBus-b400ff?style=for-the-badge" alt="Multiplayer"/>
   <img src="https://img.shields.io/badge/License-MIT-ffd700?style=for-the-badge" alt="MIT License"/>
 </p>
+
 ## 📑 Table of Contents
 
+- [🎥 Gameplay Demo Video](#-gameplay-demo-video)
 - [🌟 Project Overview](#-project-overview)
 - [🏆 What Makes Chainmates Unique](#-what-makes-chainmates-unique)
 - [🏛️ Interactive Lobby & Squad Matchmaking](#️-interactive-lobby--squad-matchmaking)
@@ -44,6 +47,15 @@
   - [Building for Production](#building-for-production)
 - [📋 Buildathon & Scene Specifications](#-buildathon--scene-specifications)
 - [📜 License](#-license)
+
+---
+
+## 🎥 Gameplay Demo Video
+
+[![Chainmates Gameplay Demo Video](assets/images/thumbnail.png)](https://youtu.be/2_w7LrtoAqk)
+
+> 📺 **Watch Full Gameplay Video on YouTube:** [https://youtu.be/2_w7LrtoAqk](https://youtu.be/2_w7LrtoAqk)  
+> *Walkthrough showcasing mobile-first matchmaking, 7.0m dynamic tether physics, procedural endless climb, and solo AI companion mode.*
 
 ---
 
