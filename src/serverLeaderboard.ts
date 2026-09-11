@@ -44,6 +44,18 @@ let isServerAwake = false
 let heartbeatTimer = 0
 const HEARTBEAT_INTERVAL = 300 // ping every 5 minutes to keep Render alive
 
+// Submission guards to prevent rapid duplicate requests or feedback loops
+let isSubmitting = false
+let lastSubmittedSignature = ''
+
+/**
+ * Reset submission guard when a new run begins (e.g. entering RUNNING/PRACTICE phase)
+ */
+export function resetSubmissionGuard() {
+  lastSubmittedSignature = ''
+  isSubmitting = false
+}
+
 // Queue of scores that were saved locally while the server was offline/sleeping
 const pendingOfflineSyncQueue: Array<{
   mode: string
@@ -194,90 +206,114 @@ export function fetchPersistentLeaderboard() {
  * If server is offline/sleeping, saves to local cache and queues for background sync.
  */
 export function pushPersistentLeaderboard() {
+  const isSolo = gameState.isPracticeMode || !gameState.partnerId || gameState.partnerId === '__SOLO__'
+
+  // Don't submit non-runs or empty scores
+  if (gameState.teamScore <= 0 && gameState.maxAltitude <= 0) {
+    return
+  }
+
+  // Deterministic team name: alphabetize player names in co-op so both clients agree
+  const teamName = isSolo
+    ? (gameState.localName || 'Solo Climber')
+    : [gameState.localName || 'Player 1', gameState.partnerName || 'Player 2'].sort().join(' & ')
+
+  const mode = isSolo ? 'SOLO' : 'SQUAD'
+  const score = gameState.teamScore
+  const altitude = Math.round(gameState.maxAltitude * 10) / 10
+
+  // Deduplication guard: prevent sending identical run scores or concurrent submissions
+  const signature = `${mode}:${teamName}:${score}:${altitude}`
+  if (signature === lastSubmittedSignature || isSubmitting) {
+    console.log(`[Chainmates] Score submission skipped (already submitted or in-flight: ${signature})`)
+    return
+  }
+
+  isSubmitting = true
+  lastSubmittedSignature = signature
+
   executeTask(async () => {
-    const isSolo = gameState.isPracticeMode || !gameState.partnerId || gameState.partnerId === '__SOLO__'
-
-    const teamName = isSolo
-      ? (gameState.localName || 'Solo Climber')
-      : `${gameState.localName || 'Player 1'} & ${gameState.partnerName || 'Player 2'}`
-
-    const payload = {
-      mode: isSolo ? 'SOLO' : 'SQUAD',
-      teamName,
-      score: gameState.teamScore,
-      altitude: Math.round(gameState.maxAltitude * 10) / 10,
-      partnerName: isSolo ? 'Ball Droid' : (gameState.partnerName || ''),
-      playerId: gameState.localId
-    }
-
-    // 1. Optimistic Local Cache Update
-    if (isSolo) {
-      const localSolo: SoloLeaderboardEntry = {
-        displayName: teamName,
-        playerId: gameState.localId,
-        soloScore: gameState.teamScore,
-        maxAltitude: Math.round(gameState.maxAltitude * 10) / 10,
-        formattedTime: '0:00.00'
+    try {
+      const payload = {
+        mode,
+        teamName,
+        score,
+        altitude,
+        partnerName: isSolo ? 'Ball Droid' : (gameState.partnerName || ''),
+        playerId: gameState.localId
       }
-      mergeIntoSoloBoard(gameState.soloLeaderboard, [localSolo])
-      gameState.onSoloLeaderboardUpdate?.(gameState.soloLeaderboard)
-    } else {
-      const localEntry: LeaderboardEntry = {
-        displayName: teamName,
-        partnerName: gameState.partnerName,
-        playerId: gameState.localId,
-        teamScore: gameState.teamScore,
-        maxAltitude: Math.round(gameState.maxAltitude * 10) / 10,
-        formattedTime: '0:00.00'
-      }
-      mergeIntoBoard(gameState.leaderboard, [localEntry])
-      gameState.onLeaderboardUpdate?.(gameState.leaderboard)
-    }
 
-    // 2. Submit to server with retry & offline queueing
-    let sent = false
-    const maxRetries = 3
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        const res = await fetch(`${RENDER_SERVER_URL}/api/score`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-          body: JSON.stringify(payload)
-        })
-
-        if (res.ok) {
-          const data = await res.json() as ServerLeaderboardResponse
-          if (data.success) {
-            isServerAwake = true
-            if (data.squadLeaderboard) {
-              mergeIntoBoard(gameState.leaderboard, mapServerToClient(data.squadLeaderboard))
-              gameState.onLeaderboardUpdate?.(gameState.leaderboard)
-            }
-            if (data.soloLeaderboard) {
-              mergeIntoSoloBoard(gameState.soloLeaderboard, mapServerToSoloClient(data.soloLeaderboard))
-              gameState.onSoloLeaderboardUpdate?.(gameState.soloLeaderboard)
-            }
-            console.log(`[Chainmates] ${payload.mode} score confirmed on Authoritative Server ✓`)
-            sent = true
-            return
-          }
+      // 1. Optimistic Local Cache Update
+      if (isSolo) {
+        const localSolo: SoloLeaderboardEntry = {
+          displayName: teamName,
+          playerId: gameState.localId,
+          soloScore: score,
+          maxAltitude: altitude,
+          formattedTime: '0:00.00'
         }
-      } catch (e) {
-        console.log(`[Chainmates] Submit attempt ${attempt}/${maxRetries} connecting...`)
+        mergeIntoSoloBoard(gameState.soloLeaderboard, [localSolo])
+        gameState.onSoloLeaderboardUpdate?.(gameState.soloLeaderboard)
+      } else {
+        const localEntry: LeaderboardEntry = {
+          displayName: teamName,
+          partnerName: gameState.partnerName,
+          playerId: gameState.localId,
+          teamScore: score,
+          maxAltitude: altitude,
+          formattedTime: '0:00.00'
+        }
+        mergeIntoBoard(gameState.leaderboard, [localEntry])
+        gameState.onLeaderboardUpdate?.(gameState.leaderboard)
       }
 
-      if (attempt < maxRetries) {
-        await new Promise(resolve => setTimeout(() => resolve(null), attempt * 3000))
-      }
-    }
+      // 2. Submit to server with retry & offline queueing
+      let sent = false
+      const maxRetries = 3
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          const res = await fetch(`${RENDER_SERVER_URL}/api/score`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json'
+            },
+            body: JSON.stringify(payload)
+          })
 
-    // If all immediate retries failed, enqueue for background sync once server wakes up
-    if (!sent) {
-      console.log('[Chainmates] Server offline: score cached locally & enqueued for sync ✓')
-      pendingOfflineSyncQueue.push(payload)
+          if (res.ok) {
+            const data = await res.json() as ServerLeaderboardResponse
+            if (data.success) {
+              isServerAwake = true
+              if (data.squadLeaderboard) {
+                mergeIntoBoard(gameState.leaderboard, mapServerToClient(data.squadLeaderboard))
+                gameState.onLeaderboardUpdate?.(gameState.leaderboard)
+              }
+              if (data.soloLeaderboard) {
+                mergeIntoSoloBoard(gameState.soloLeaderboard, mapServerToSoloClient(data.soloLeaderboard))
+                gameState.onSoloLeaderboardUpdate?.(gameState.soloLeaderboard)
+              }
+              console.log(`[Chainmates] ${payload.mode} score confirmed on Authoritative Server ✓`)
+              sent = true
+              return
+            }
+          }
+        } catch (e) {
+          console.log(`[Chainmates] Submit attempt ${attempt}/${maxRetries} connecting...`)
+        }
+
+        if (attempt < maxRetries) {
+          await new Promise(resolve => setTimeout(() => resolve(null), attempt * 3000))
+        }
+      }
+
+      // If all immediate retries failed, enqueue for background sync once server wakes up
+      if (!sent) {
+        console.log('[Chainmates] Server offline: score cached locally & enqueued for sync ✓')
+        pendingOfflineSyncQueue.push(payload)
+      }
+    } finally {
+      isSubmitting = false
     }
   })
 }

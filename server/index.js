@@ -124,51 +124,95 @@ function saveData(data) {
 // In-memory cache synced with disk and Supabase
 let db = loadData()
 
-/** Sync cache from Supabase table */
+/** Sync cache from Supabase table with deduplication and auto-purge */
 async function syncFromSupabase() {
   if (!supabase) return
   try {
-    // 1. Fetch Top Squad Scores
+    // 1. Fetch Top Squad Scores (ordered by score descending)
     const { data: squadData, error: squadErr } = await supabase
       .from('leaderboard')
-      .select('display_name, score, altitude, partner_name, player_id, created_at')
+      .select('id, display_name, score, altitude, partner_name, player_id, created_at')
       .eq('mode', 'squad')
       .order('score', { ascending: false })
-      .limit(50)
+      .limit(100)
 
     if (squadErr) {
       console.warn('[Supabase] Squad query error (table may need creation):', squadErr.message)
     } else if (squadData && squadData.length > 0) {
-      db.squadLeaderboard = squadData.map(row => ({
-        displayName: row.display_name,
-        score: Number(row.score),
-        altitude: Number(row.altitude),
-        partnerName: row.partner_name || '',
-        playerId: row.player_id || '',
-        timestamp: new Date(row.created_at).getTime()
-      }))
-      console.log(`[Supabase] Loaded ${db.squadLeaderboard.length} squad scores from database ✓`)
+      const uniqueSquad = []
+      const duplicateSquadIds = []
+      const seen = new Set()
+
+      for (const row of squadData) {
+        const key = (row.display_name || '').trim().toLowerCase()
+        if (!key) continue
+        if (seen.has(key)) {
+          if (row.id) duplicateSquadIds.push(row.id)
+          continue
+        }
+        seen.add(key)
+        uniqueSquad.push({
+          displayName: row.display_name,
+          score: Number(row.score),
+          altitude: Number(row.altitude),
+          partnerName: row.partner_name || '',
+          playerId: row.player_id || '',
+          timestamp: new Date(row.created_at).getTime()
+        })
+      }
+
+      db.squadLeaderboard = uniqueSquad
+      console.log(`[Supabase] Loaded ${db.squadLeaderboard.length} unique squad scores from database ✓`)
+
+      // Auto-purge duplicate squad rows from Supabase
+      if (duplicateSquadIds.length > 0) {
+        supabase.from('leaderboard').delete().in('id', duplicateSquadIds).then(() => {
+          console.log(`[Supabase] Auto-purged ${duplicateSquadIds.length} duplicate squad rows from database ✓`)
+        }).catch(err => console.error('[Supabase] Duplicate purge error:', err.message))
+      }
     }
 
-    // 2. Fetch Top Solo Scores
+    // 2. Fetch Top Solo Scores (ordered by score descending)
     const { data: soloData, error: soloErr } = await supabase
       .from('leaderboard')
-      .select('display_name, score, altitude, player_id, created_at')
+      .select('id, display_name, score, altitude, player_id, created_at')
       .eq('mode', 'solo')
       .order('score', { ascending: false })
-      .limit(50)
+      .limit(100)
 
     if (soloErr) {
       console.warn('[Supabase] Solo query error (table may need creation):', soloErr.message)
     } else if (soloData && soloData.length > 0) {
-      db.soloLeaderboard = soloData.map(row => ({
-        displayName: row.display_name,
-        score: Number(row.score),
-        altitude: Number(row.altitude),
-        playerId: row.player_id || '',
-        timestamp: new Date(row.created_at).getTime()
-      }))
-      console.log(`[Supabase] Loaded ${db.soloLeaderboard.length} solo scores from database ✓`)
+      const uniqueSolo = []
+      const duplicateSoloIds = []
+      const seen = new Set()
+
+      for (const row of soloData) {
+        const key = (row.display_name || '').trim().toLowerCase()
+        if (!key) continue
+        if (seen.has(key)) {
+          if (row.id) duplicateSoloIds.push(row.id)
+          continue
+        }
+        seen.add(key)
+        uniqueSolo.push({
+          displayName: row.display_name,
+          score: Number(row.score),
+          altitude: Number(row.altitude),
+          playerId: row.player_id || '',
+          timestamp: new Date(row.created_at).getTime()
+        })
+      }
+
+      db.soloLeaderboard = uniqueSolo
+      console.log(`[Supabase] Loaded ${db.soloLeaderboard.length} unique solo scores from database ✓`)
+
+      // Auto-purge duplicate solo rows from Supabase
+      if (duplicateSoloIds.length > 0) {
+        supabase.from('leaderboard').delete().in('id', duplicateSoloIds).then(() => {
+          console.log(`[Supabase] Auto-purged ${duplicateSoloIds.length} duplicate solo rows from database ✓`)
+        }).catch(err => console.error('[Supabase] Duplicate purge error:', err.message))
+      }
     }
 
     saveData(db)
@@ -259,18 +303,46 @@ app.post('/api/score', scoreSubmitLimiter, async (req, res) => {
     if (targetBoard.length > 100) targetBoard.length = 100
     saveData(db)
 
-    // Persist to Supabase
+    // Persist to Supabase (Upsert: update if higher score, clean any duplicate rows)
     if (supabase) {
       try {
-        await supabase.from('leaderboard').insert([{
-          mode: 'solo',
-          display_name: cleanName,
-          partner_name: '',
-          player_id: playerId || '',
-          score: cleanScore,
-          altitude: cleanAlt
-        }])
-        console.log(`[Supabase] Solo score saved: ${cleanName} — ${cleanScore} pts (${cleanAlt}m)`)
+        const { data: existingRows } = await supabase
+          .from('leaderboard')
+          .select('id, score, altitude')
+          .eq('mode', 'solo')
+          .ilike('display_name', cleanName)
+          .order('score', { ascending: false })
+
+        if (existingRows && existingRows.length > 0) {
+          const primary = existingRows[0]
+          // Purge duplicate rows for this player if any exist
+          if (existingRows.length > 1) {
+            const duplicateIds = existingRows.slice(1).map(r => r.id).filter(Boolean)
+            if (duplicateIds.length > 0) {
+              await supabase.from('leaderboard').delete().in('id', duplicateIds)
+            }
+          }
+
+          if (cleanScore > primary.score || (cleanScore === primary.score && cleanAlt > (primary.altitude || 0))) {
+            await supabase.from('leaderboard').update({
+              score: cleanScore,
+              altitude: Math.max(Number(primary.altitude || 0), cleanAlt),
+              player_id: playerId || '',
+              created_at: new Date().toISOString()
+            }).eq('id', primary.id)
+            console.log(`[Supabase] Solo score updated: ${cleanName} — ${cleanScore} pts (${cleanAlt}m)`)
+          }
+        } else {
+          await supabase.from('leaderboard').insert([{
+            mode: 'solo',
+            display_name: cleanName,
+            partner_name: '',
+            player_id: playerId || '',
+            score: cleanScore,
+            altitude: cleanAlt
+          }])
+          console.log(`[Supabase] Solo score saved: ${cleanName} — ${cleanScore} pts (${cleanAlt}m)`)
+        }
       } catch (e) {
         console.error('[Supabase] Failed to write solo score:', e.message)
       }
@@ -312,18 +384,47 @@ app.post('/api/score', scoreSubmitLimiter, async (req, res) => {
   if (targetBoard.length > 100) targetBoard.length = 100
   saveData(db)
 
-  // Persist to Supabase
+  // Persist to Supabase (Upsert: update if higher score, clean any duplicate rows)
   if (supabase) {
     try {
-      await supabase.from('leaderboard').insert([{
-        mode: 'squad',
-        display_name: cleanName,
-        partner_name: partnerName || '',
-        player_id: playerId || '',
-        score: cleanScore,
-        altitude: cleanAlt
-      }])
-      console.log(`[Supabase] Squad score saved: ${cleanName} — ${cleanScore} pts (${cleanAlt}m)`)
+      const { data: existingRows } = await supabase
+        .from('leaderboard')
+        .select('id, score, altitude')
+        .eq('mode', 'squad')
+        .ilike('display_name', cleanName)
+        .order('score', { ascending: false })
+
+      if (existingRows && existingRows.length > 0) {
+        const primary = existingRows[0]
+        // Purge duplicate rows for this squad if any exist
+        if (existingRows.length > 1) {
+          const duplicateIds = existingRows.slice(1).map(r => r.id).filter(Boolean)
+          if (duplicateIds.length > 0) {
+            await supabase.from('leaderboard').delete().in('id', duplicateIds)
+          }
+        }
+
+        if (cleanScore > primary.score || (cleanScore === primary.score && cleanAlt > (primary.altitude || 0))) {
+          await supabase.from('leaderboard').update({
+            score: cleanScore,
+            altitude: Math.max(Number(primary.altitude || 0), cleanAlt),
+            partner_name: partnerName || '',
+            player_id: playerId || '',
+            created_at: new Date().toISOString()
+          }).eq('id', primary.id)
+          console.log(`[Supabase] Squad score updated: ${cleanName} — ${cleanScore} pts (${cleanAlt}m)`)
+        }
+      } else {
+        await supabase.from('leaderboard').insert([{
+          mode: 'squad',
+          display_name: cleanName,
+          partner_name: partnerName || '',
+          player_id: playerId || '',
+          score: cleanScore,
+          altitude: cleanAlt
+        }])
+        console.log(`[Supabase] Squad score saved: ${cleanName} — ${cleanScore} pts (${cleanAlt}m)`)
+      }
     } catch (e) {
       console.error('[Supabase] Failed to write squad score:', e.message)
     }

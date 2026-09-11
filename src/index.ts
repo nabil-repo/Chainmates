@@ -52,6 +52,7 @@ import {
   warmupServer,
   fetchPersistentLeaderboard,
   pushPersistentLeaderboard,
+  resetSubmissionGuard,
   serverHeartbeatSystem
 } from './serverLeaderboard'
 import { startBgMusic, playYankSound, unlockAudio } from './audio'
@@ -65,6 +66,11 @@ export function main() {
   // 1. Wire UI callbacks into gameState
   gameState.onPhaseChange = (phase) => {
     setUiPhase(phase)
+    if (phase === 'RUNNING' || phase === 'PRACTICE') {
+      resetSubmissionGuard()
+    } else if (phase === 'GAME_OVER' || phase === 'FINISHED') {
+      pushPersistentLeaderboard()
+    }
   }
   gameState.onCountdownTick = (n) => {
     setUiCountdown(n)
@@ -72,12 +78,9 @@ export function main() {
   gameState.onLeaderboardUpdate = (board) => {
     setUiLeaderboard(board)
     update3DLeaderboard(board)
-    // Persist every leaderboard update to JSONBin
-    pushPersistentLeaderboard()
   }
   gameState.onSoloLeaderboardUpdate = (board) => {
     setUiSoloLeaderboard(board)
-    pushPersistentLeaderboard()
   }
   gameState.onYankReceived = () => {
     yankFlashTimer = YANK_FLASH_DURATION
