@@ -77,6 +77,7 @@ export function main() {
   }
   gameState.onSoloLeaderboardUpdate = (board) => {
     setUiSoloLeaderboard(board)
+    pushPersistentLeaderboard()
   }
   gameState.onYankReceived = () => {
     yankFlashTimer = YANK_FLASH_DURATION

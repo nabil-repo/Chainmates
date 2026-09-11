@@ -1,24 +1,26 @@
 /**
  * serverLeaderboard.ts
- * Authoritative Leaderboard Client for Chainmates (Co-op Squad Rankings)
- * Powered by Authoritative REST Backend on Render (https://chainmates-leaderboard.onrender.com)
+ * Authoritative Leaderboard Client for Chainmates (Co-op Squad & Solo Practice Rankings)
+ * Powered by Authoritative REST Backend on Render & Supabase PostgreSQL
  *
  * Offline & Local Cache Architecture:
  *  1. Local Cache Fallback: Instantly populates the in-world 3D podium & HUD if offline
  *  2. Optimistic Updates: Scores are immediately recorded locally with zero UI lag
- *  3. Offline Sync Queue: Unsubmitted scores are stored in memory and flushed automatically
+ *  3. Supabase Cloud Sync: Scores persist permanently across server sleep and restarts
+ *  4. Offline Sync Queue: Unsubmitted scores are stored in memory and flushed automatically
  *     when the server becomes accessible.
- *  4. Cold-Start Warmup & Heartbeat: Keeps Render active and syncs in background.
+ *  5. Cold-Start Warmup & Heartbeat: Keeps Render active and syncs in background.
  */
 
 import { executeTask } from '@dcl/sdk/ecs'
-import { gameState, LeaderboardEntry } from './gameState'
+import { gameState, LeaderboardEntry, SoloLeaderboardEntry } from './gameState'
 
 // ─── Render Server Config ─────────────────────────────────────────────────────
 export const RENDER_SERVER_URL = 'https://chainmates.onrender.com'
 
-// ─── Default Local Cache (Clean initial state for real players) ───────────────
+// ─── Default Local Cache (Clean initial state — real player records only) ───────
 const LOCAL_FALLBACK_CACHE: LeaderboardEntry[] = []
+const LOCAL_SOLO_FALLBACK_CACHE: SoloLeaderboardEntry[] = []
 
 interface ServerLeaderboardItem {
   displayName: string
@@ -32,7 +34,10 @@ interface ServerLeaderboardItem {
 
 interface ServerLeaderboardResponse {
   success: boolean
+  mode?: string
+  rank?: number
   squadLeaderboard?: ServerLeaderboardItem[]
+  soloLeaderboard?: ServerLeaderboardItem[]
 }
 
 let isServerAwake = false
@@ -60,6 +65,16 @@ function mapServerToClient(entries: ServerLeaderboardItem[]): LeaderboardEntry[]
   }))
 }
 
+function mapServerToSoloClient(entries: ServerLeaderboardItem[]): SoloLeaderboardEntry[] {
+  return entries.map(e => ({
+    displayName: e.displayName,
+    playerId: e.playerId || '',
+    soloScore: e.score,
+    maxAltitude: e.altitude || 0,
+    formattedTime: e.formattedTime || '0:00.00'
+  }))
+}
+
 function mergeIntoBoard(target: LeaderboardEntry[], incoming: LeaderboardEntry[]) {
   for (const entry of incoming) {
     const idx = target.findIndex(e => e.displayName.toLowerCase() === entry.displayName.toLowerCase())
@@ -75,6 +90,21 @@ function mergeIntoBoard(target: LeaderboardEntry[], incoming: LeaderboardEntry[]
   if (target.length > 20) target.length = 20
 }
 
+function mergeIntoSoloBoard(target: SoloLeaderboardEntry[], incoming: SoloLeaderboardEntry[]) {
+  for (const entry of incoming) {
+    const idx = target.findIndex(e => e.displayName.toLowerCase() === entry.displayName.toLowerCase())
+    if (idx >= 0) {
+      if (entry.soloScore > target[idx].soloScore) {
+        target[idx] = entry
+      }
+    } else {
+      target.push(entry)
+    }
+  }
+  target.sort((a, b) => b.soloScore - a.soloScore)
+  if (target.length > 20) target.length = 20
+}
+
 /**
  * Initialize local leaderboard from fallback cache.
  * Ensures the 3D podium and UI are never empty.
@@ -83,6 +113,10 @@ export function initLocalLeaderboardCache() {
   if (gameState.leaderboard.length === 0) {
     mergeIntoBoard(gameState.leaderboard, LOCAL_FALLBACK_CACHE)
     gameState.onLeaderboardUpdate?.(gameState.leaderboard)
+  }
+  if (gameState.soloLeaderboard.length === 0) {
+    mergeIntoSoloBoard(gameState.soloLeaderboard, LOCAL_SOLO_FALLBACK_CACHE)
+    gameState.onSoloLeaderboardUpdate?.(gameState.soloLeaderboard)
   }
 }
 
@@ -116,7 +150,7 @@ export function warmupServer() {
 }
 
 /**
- * Fetch authoritative rankings from the Render backend.
+ * Fetch authoritative rankings from the Render / Supabase backend.
  * Merges scores into gameState and updates the in-world 3D leaderboard.
  */
 export function fetchPersistentLeaderboard() {
@@ -134,12 +168,20 @@ export function fetchPersistentLeaderboard() {
 
       const data = await res.json() as ServerLeaderboardResponse
 
-      if (data.success && data.squadLeaderboard && data.squadLeaderboard.length > 0) {
+      if (data.success) {
         isServerAwake = true
-        const mapped = mapServerToClient(data.squadLeaderboard)
-        mergeIntoBoard(gameState.leaderboard, mapped)
-        gameState.onLeaderboardUpdate?.(gameState.leaderboard)
-        console.log(`[Chainmates] Authoritative Squad Leaderboard synchronized (${gameState.leaderboard.length} entries) ✓`)
+        if (data.squadLeaderboard && data.squadLeaderboard.length > 0) {
+          const mapped = mapServerToClient(data.squadLeaderboard)
+          mergeIntoBoard(gameState.leaderboard, mapped)
+          gameState.onLeaderboardUpdate?.(gameState.leaderboard)
+          console.log(`[Chainmates] Authoritative Squad Leaderboard synchronized (${gameState.leaderboard.length} entries) ✓`)
+        }
+        if (data.soloLeaderboard && data.soloLeaderboard.length > 0) {
+          const soloMapped = mapServerToSoloClient(data.soloLeaderboard)
+          mergeIntoSoloBoard(gameState.soloLeaderboard, soloMapped)
+          gameState.onSoloLeaderboardUpdate?.(gameState.soloLeaderboard)
+          console.log(`[Chainmates] Authoritative Solo Leaderboard synchronized (${gameState.soloLeaderboard.length} entries) ✓`)
+        }
       }
     } catch (e) {
       console.log('[Chainmates] Server not accessible — continuing with local cache seamlessly ✓')
@@ -148,38 +190,49 @@ export function fetchPersistentLeaderboard() {
 }
 
 /**
- * Submit the completed co-op squad run score to the authoritative Render server.
+ * Submit the completed run score (Co-op Squad or Solo Practice) to the authoritative server.
  * If server is offline/sleeping, saves to local cache and queues for background sync.
  */
 export function pushPersistentLeaderboard() {
   executeTask(async () => {
     const isSolo = gameState.isPracticeMode || !gameState.partnerId || gameState.partnerId === '__SOLO__'
-    if (isSolo) {
-      // Solo runs are practice-only; do not write to persistent co-op leaderboard
-      return
-    }
 
-    const teamName = `${gameState.localName || 'Player 1'} & ${gameState.partnerName || 'Player 2'}`
+    const teamName = isSolo
+      ? (gameState.localName || 'Solo Climber')
+      : `${gameState.localName || 'Player 1'} & ${gameState.partnerName || 'Player 2'}`
+
     const payload = {
-      mode: 'SQUAD',
+      mode: isSolo ? 'SOLO' : 'SQUAD',
       teamName,
       score: gameState.teamScore,
-      altitude: Math.round(gameState.maxAltitude),
-      partnerName: gameState.partnerName,
+      altitude: Math.round(gameState.maxAltitude * 10) / 10,
+      partnerName: isSolo ? 'Ball Droid' : (gameState.partnerName || ''),
       playerId: gameState.localId
     }
 
-    // 1. Optimistic Local Cache Update: ensure local player sees new score immediately
-    const localEntry: LeaderboardEntry = {
-      displayName: teamName,
-      partnerName: gameState.partnerName,
-      playerId: gameState.localId,
-      teamScore: gameState.teamScore,
-      maxAltitude: Math.round(gameState.maxAltitude),
-      formattedTime: '0:00.00'
+    // 1. Optimistic Local Cache Update
+    if (isSolo) {
+      const localSolo: SoloLeaderboardEntry = {
+        displayName: teamName,
+        playerId: gameState.localId,
+        soloScore: gameState.teamScore,
+        maxAltitude: Math.round(gameState.maxAltitude * 10) / 10,
+        formattedTime: '0:00.00'
+      }
+      mergeIntoSoloBoard(gameState.soloLeaderboard, [localSolo])
+      gameState.onSoloLeaderboardUpdate?.(gameState.soloLeaderboard)
+    } else {
+      const localEntry: LeaderboardEntry = {
+        displayName: teamName,
+        partnerName: gameState.partnerName,
+        playerId: gameState.localId,
+        teamScore: gameState.teamScore,
+        maxAltitude: Math.round(gameState.maxAltitude * 10) / 10,
+        formattedTime: '0:00.00'
+      }
+      mergeIntoBoard(gameState.leaderboard, [localEntry])
+      gameState.onLeaderboardUpdate?.(gameState.leaderboard)
     }
-    mergeIntoBoard(gameState.leaderboard, [localEntry])
-    gameState.onLeaderboardUpdate?.(gameState.leaderboard)
 
     // 2. Submit to server with retry & offline queueing
     let sent = false
@@ -197,11 +250,17 @@ export function pushPersistentLeaderboard() {
 
         if (res.ok) {
           const data = await res.json() as ServerLeaderboardResponse
-          if (data.success && data.squadLeaderboard) {
+          if (data.success) {
             isServerAwake = true
-            mergeIntoBoard(gameState.leaderboard, mapServerToClient(data.squadLeaderboard))
-            gameState.onLeaderboardUpdate?.(gameState.leaderboard)
-            console.log('[Chainmates] Squad score confirmed on Authoritative Server ✓')
+            if (data.squadLeaderboard) {
+              mergeIntoBoard(gameState.leaderboard, mapServerToClient(data.squadLeaderboard))
+              gameState.onLeaderboardUpdate?.(gameState.leaderboard)
+            }
+            if (data.soloLeaderboard) {
+              mergeIntoSoloBoard(gameState.soloLeaderboard, mapServerToSoloClient(data.soloLeaderboard))
+              gameState.onSoloLeaderboardUpdate?.(gameState.soloLeaderboard)
+            }
+            console.log(`[Chainmates] ${payload.mode} score confirmed on Authoritative Server ✓`)
             sent = true
             return
           }
@@ -228,30 +287,29 @@ export function pushPersistentLeaderboard() {
  */
 function flushPendingOfflineQueue() {
   if (pendingOfflineSyncQueue.length === 0) return
-  console.log(`[Chainmates] Syncing ${pendingOfflineSyncQueue.length} offline cached scores to server...`)
 
-  while (pendingOfflineSyncQueue.length > 0) {
-    const item = pendingOfflineSyncQueue.shift()
-    if (!item) break
-    executeTask(async () => {
+  executeTask(async () => {
+    console.log(`[Chainmates] Flushing ${pendingOfflineSyncQueue.length} pending offline scores to server...`)
+    while (pendingOfflineSyncQueue.length > 0) {
+      const payload = pendingOfflineSyncQueue.shift()
+      if (!payload) break
       try {
         await fetch(`${RENDER_SERVER_URL}/api/score`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(item)
+          body: JSON.stringify(payload)
         })
       } catch (e) {
-        // Re-queue if still failing
-        pendingOfflineSyncQueue.push(item)
+        console.log('[Chainmates] Sync retry deferred')
+        pendingOfflineSyncQueue.unshift(payload)
+        break
       }
-    })
-  }
+    }
+  })
 }
 
 /**
- * ECS Keep-Alive Heartbeat System
- * Sends a lightweight health ping every 5 minutes while players are inside the scene.
- * Also flushes any pending offline scores when the server is detected awake.
+ * Periodic system to keep Render alive and poll latest rankings.
  */
 export function serverHeartbeatSystem(dt: number) {
   heartbeatTimer += dt
@@ -262,10 +320,11 @@ export function serverHeartbeatSystem(dt: number) {
         const res = await fetch(`${RENDER_SERVER_URL}/health`, { method: 'GET' })
         if (res.ok) {
           isServerAwake = true
+          fetchPersistentLeaderboard()
           flushPendingOfflineQueue()
         }
       } catch (e) {
-        // Silent keepalive check
+        isServerAwake = false
       }
     })
   }
