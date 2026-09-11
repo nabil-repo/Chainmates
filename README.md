@@ -73,14 +73,6 @@
 
 Every jump requires teamwork: leap together to cross wide gaps, anchor your partner when they slip, and keep the chain within safe tension boundaries. If one player falls into the void, both are pulled down into the abyss!
 
-For solo players and hackathon judges testing independently, Chainmates includes a fully autonomous **AI Ball Droid companion** that tethers to you, simulating partner tension and physics in real time.
-
-```
-   [ Squad Lounge ] ───(Link Partner or AI Droid)───► [ 3-2-1 Countdown ]
-                                                               │
-   [ Global High Scores ] ◄──(Fall / Game Over) ◄─── [ Endless Kinetic Climb ]
-```
-
 ---
 
 ## 🏆 What Makes Chainmates Unique (The Competitive Edge)
@@ -96,23 +88,6 @@ Unlike traditional metaverse mini-games that rely on static obstacle courses or 
 | 5️⃣ | **🛡️ Anti-Cheat Authoritative Leaderboard** | High-availability Render REST backend with IP rate-limiting, mathematical sanity validation, strict duo vs solo score segregation, and offline resilience. |
 | 6️⃣ | **🤝 True Physical Interdependence** | Avatars bound by a 7.0m elastic tether with **3 live tension states** (Slack, Taut, Yanked) applying real elastic momentum impulses. |
 | 7️⃣ | **🤖 Autonomous AI Ball Droid Companion** | Solves the #1 flaw of multiplayer hackathon entries: *unplayability when tested solo*. With 1 tap, an autonomous hover droid binds to you. |
-
-### 📊 Direct Comparison: Chainmates vs. Typical Metaverse Experiences
-
-```
-┌───────────────────────────┬───────────────────────────────────┬────────────────────────────────────┐
-│ Feature / Dimension       │ Typical DCL Course / Competitors  │ Chainmates (Our Scene)             │
-├───────────────────────────┼───────────────────────────────────┼────────────────────────────────────┤
-│ 🤝 Co-Op Mechanics        │ Parallel play / static rope link  │ Dynamic Elastic Physics & Tension  │
-│ 🏛️ Lobby & Matchmaking    │ Manual coordination / no lobby    │ 1-Tap Squad Handshake & 3D Podium  │
-│ 🤖 Solo / Judge Testing   │ ❌ Broken / Unplayable alone      │ ✅ 1-Tap Autonomous AI Companion   │
-│ ♾️ Level Structure        │ Static fixed obstacle layout      │ Infinite Procedural Recycling Pool │
-│ ⚡ Hazard & Tension       │ Static countdown timer / none     │ Dynamic Rising Electric Void Abyss │
-│ 🌈 Visual Progression     │ Single environment theme          │ 8 Dynamic Altitude Neon Biomes     │
-│ 📱 Mobile Optimization    │ Desktop UI ported to mobile       │ 60 FPS PBR Cache, Insets & Radars  │
-│ 🛡️ Anti-Cheat & Backend   │ In-scene volatile memory / unauth │ Anti-Cheat Render REST Leaderboard │
-└───────────────────────────┴───────────────────────────────────┴────────────────────────────────────┘
-```
 
 ---
 
